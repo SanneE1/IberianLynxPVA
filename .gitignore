@@ -3,3 +3,9 @@
 .Rhistory
 .RData
 .Ruserdata
+
+results/
+QGIS/
+data/
+Manuscript/
+scrap/
