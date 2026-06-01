@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <Compiler Value="C:\lazarus\fpc\3.2.2\bin\i386-win32\fpc.exe" Date="1488545472"/>
+  <Params Value=" -MObjFPC -Scghi -CX -O3 -XX -l -vewnhibq -FiC:\Users\Z1512834Z\Documents\01_Natura_Connect\00_Lynx_Rabbit_model\Lynx_Rabbit_SIBM\lib\i386-win32 -FuC:\Users\Z1512834Z\Documents\01_Natura_Connect\00_Lynx_Rabbit_model\Lynx_Rabbit_SIBM\lynx -FuC:\Users\Z1512834Z\Documents\01_Natura_Connect\00_Lynx_Rabbit_model\Lynx_Rabbit_SIBM\rabbit -FuC:\Users\Z1512834Z\Documents\01_Natura_Connect\00_Lynx_Rabbit_model\Lynx_Rabbit_SIBM\ -FUC:\Users\Z1512834Z\Documents\01_Natura_Connect\00_Lynx_Rabbit_model\Lynx_Rabbit_SIBM\lib\i386-win32\ -FEC:\Users\Z1512834Z\Documents\01_Natura_Connect\00_Lynx_Rabbit_model\Lynx_Rabbit_SIBM\ -oC:\Users\Z1512834Z\Documents\01_Natura_Connect\00_Lynx_Rabbit_model\Lynx_Rabbit_SIBM\Run_model_release.exe Model_cmd.lpr"/>
+</CONFIG>

@@ -1,0 +1,479 @@
+unit lynx_vital_rates;
+
+{$mode ObjFPC}{$H+}
+
+interface
+
+uses
+  Classes, SysUtils, Math,
+  lynx_dispersal_assist_functions, general_functions, general_define_units;
+
+
+procedure Reproduction;
+procedure Survival;
+procedure Dispersal(day: integer);
+
+
+
+implementation
+
+
+procedure Reproduction;
+var
+  a, x,y, current_litter_size, ls, xy, CurrentDist: integer;
+  temp_X, temp_Y, Temp_mem: word;
+  male_present: boolean;
+begin
+
+  with LynxPopulation do
+  begin
+    LynxPopulationSize := LynxPopulation.Count;
+    if (LynxPopulationSize > 1) then
+      for a := 0 to LynxPopulationSize - 1 do
+      begin
+        Lynx := Items[a];
+        if Lynx^.Sex = 'm' then Continue;
+
+        male_present:= false;
+
+        {Check that the Lynx is capable of reproduction}
+          if Lynx^.status = 3 then
+            // Lynx is settled
+            if Lynx^.age >= L_min_rep_age then
+              if Lynx^.age <= L_max_rep_age then
+              // Check that there is a local male
+              begin
+                for xy := 0 to length(Lynx^.TerritoryX)-1 do
+                begin
+                  if Lynx^.TerritoryX[xy] = -1 then Continue;
+                    if Malesmap[Lynx^.TerritoryX[xy], Lynx^.TerritoryY[xy], 0] >=2 then
+                    begin
+                    male_present := true;
+                    Break;
+                    end;
+                end;
+
+                if male_present then
+                  if random < L_rep_prob then
+                  begin
+                    current_litter_size := Round(randg(L_litter_size, L_litter_size_sd));
+
+                    //Save location of the mother, to give to offspring
+                    Temp_X := Lynx^.Coor_X;
+                    Temp_Y := Lynx^.Coor_Y;
+                    Temp_mem := Lynx^.mov_mem;
+
+                    {Save locations of mother, incase of a breeding event outside established populations}
+                    if create_maps then
+                    if Lynx^.Current_pop = 0 then
+                    begin
+                     New(RepOutsidePop);
+                     RepOutsidePop^.year := current_year;
+                     RepOutsidePop^.X := Lynx^.Coor_X;
+                     RepOutsidePop^.Y := Lynx^.Coor_Y;
+                     OutRepList.Add(RepOutsidePop);
+                    end;
+
+
+                    {Create a number of new Lynxs}
+                    for ls := 1 to current_litter_size do
+                    begin
+
+                      New(Lynx);
+                      Lynx^.age := 0;
+                      if random < 0.5 then Lynx^.sex := 'f'
+                      else
+                        Lynx^.sex := 'm';
+                      Lynx^.status := 0;
+
+                      Lynx^.ID := L_ID_tracker;
+                      L_ID_tracker := L_ID_tracker + 1;
+
+                      Lynx^.Coor_X := Temp_X;
+                      Lynx^.Coor_Y := Temp_Y;
+
+                      Lynx^.Natal_pop := whichPop(temp_X, temp_Y);
+                      Lynx^.Current_pop := whichPop(temp_X, temp_Y);
+                      Lynx^.Previous_pop := whichPop(temp_X, temp_Y);
+
+                      setLength(Lynx^.TerritoryX, Tsize);
+                      setLength(Lynx^.TerritoryY, Tsize);
+                      ArrayToNegOne(Lynx^.TerritoryX);
+                      ArrayToNegOne(Lynx^.TerritoryY);
+
+                      Lynx^.mov_mem := Temp_mem;
+                      Lynx^.homeX := Lynx^.Coor_X;
+                      Lynx^.homeY := Lynx^.Coor_Y;
+                      Lynx^.return_home := False;
+
+                      Lynx^.DailySteps := 0;
+                      Lynx^.DailyStepsOpen := 0;
+
+                      LynxPopulation.add(Lynx);
+                    end;
+                  end;
+              end;
+      end;
+  end;
+end;
+
+procedure Survival;
+var
+  a, b: integer;
+  surv_p, surv_day, daily_mortality_p: real;
+  die: boolean;
+  main_pop, nat_pop: integer;
+  //temp_X,temp_Y:word;
+begin
+
+  with LynxPopulation do
+  begin
+    LynxPopulationSize := LynxPopulation.Count;
+    for a := LynxPopulationSize - 1 downto 0 do  //the index in the list starts at 0
+    begin
+      Lynx := items[a];
+
+      surv_p := -1;
+
+      nat_pop := Lynx^.Natal_pop;
+
+      if (nat_pop = 22) then
+      surv_p := L_surv_array[Lynx^.Age, 1]     // Vale
+      else if (nat_pop = 4) then
+      surv_p := L_surv_array[Lynx^.Age, 2]     // Donana
+      else if (nat_pop = 11) or (nat_pop = 14) or (nat_pop = 17) or (nat_pop = 21) or (nat_pop = 3) then
+      surv_p := L_surv_array[Lynx^.Age, 3]     // Matachel
+      else if (nat_pop = 1) or (nat_pop = 2) or (nat_pop = 5) or (nat_pop = 6) or (nat_pop = 7) or (nat_pop = 8) or (nat_pop = 10) or (nat_pop = 16) or (nat_pop = 18) or (nat_pop = 19) then
+      surv_p := L_surv_array[Lynx^.Age, 4]     // Morena Andujar
+      else if (nat_pop = 9) or (nat_pop = 12) or (nat_pop = 13) or (nat_pop = 20) then
+      surv_p := L_surv_array[Lynx^.Age, 5]     // Toledo
+      else surv_p := L_surv_array[Lynx^.Age, 0];     // Other
+
+      {Transform annual survival (surv_p) to daily survival (surv_day)}
+        surv_day := Power(surv_p, (1 / 12)); //365
+
+        if (Lynx^.Status = 1) then
+        begin
+          daily_mortality_p := (1-surv_day) + ((1-surv_day) * L_surv_disp_rho * (Lynx^.DailyStepsOpen / (Lynx^.DailySteps + 0.001)));
+          surv_day := 1-daily_mortality_p;
+        end;
+
+      {Determine fate of Lynxs}
+      die := False;
+      if random > surv_day then die := True;
+      if die then
+      begin
+       if Lynx^.Status >= 2 then
+       for b := 0 to length(Lynx^.TerritoryX) - 1 do
+          begin
+            if (Lynx^.TerritoryX[b] = -1) then Continue;
+            if Lynx^.Sex = 'f' then
+            begin
+            FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 0]:= -1;
+            FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 1]:= -1;
+            end
+            else
+            begin
+            MalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 0]:= -1;
+            MalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 1]:= -1;
+            end;
+            Lynx^.TerritoryX[b] := -1;
+            Lynx^.TerritoryY[b] := -1;
+          end;
+        Delete(a);
+      end;
+    end;
+  end;
+end;
+
+procedure Dispersal(day: integer);
+var
+  a, b, d, e, f, g, i, j, new_dir, TestCoordX, TestCoordY, TCount, first_Tcount, FCount, xi, yi, xy, competitor_age : integer;
+  age_m, P_disp_start: real;
+  temp_terrX, temp_terrY: array of integer;
+  temp_ind: PLynx;
+  Iwin, test_cell_available, c_available, already_terr: boolean;
+  start_x, start_y: integer;
+begin
+  with LynxPopulation do
+  begin
+    LynxPopulationSize := LynxPopulation.Count;
+    for a := 0 to LynxPopulationSize - 1 do
+
+    begin
+      Lynx := items[a];
+
+      {If the Lynx is a subadult determine if it starts dispersing}
+      if (Lynx^.Status = 0) and (Lynx^.Age > 0) then
+      begin
+        age_m := (Lynx^.Age * 12) + (day / 30);
+        // Formula requires age in months
+        P_disp_start := -1.55 + 2.62 * (1 - Exp(-0.115 * age_m));
+        // Calculate probability of dispersing -> higher prob, more likely to start disp.
+        if random <= P_disp_start then Lynx^.Status := 1;
+        // Change status to dispersing if random <= to p_disp_start
+      end;
+
+      {Check size of territory for newly established Lynxs.
+      If they do not have enough, see if there is enough unclaimed territory around to add to their territory.
+      If not, restart dispersal}
+      if (Lynx^.Status = 2) then
+      begin
+        TCount := 0;
+
+        for b := 0 to length(Lynx^.TerritoryX) - 1 do
+        begin
+          if (Lynx^.TerritoryX[b] > -1) and (Lynx^.TerritoryY[b] > -1) then
+          begin
+            if (Lynx^.Sex = 'f') or
+            ((Lynx^.Sex = 'm') and (FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 0] = 3)) then
+            Inc(TCount);
+          end;
+        end;
+
+        {If there's not enough territory, see if there's any unclaimed available}
+        if (TCount < Tsize) then //If TCount is 0 that means that the Lynx will have to move for sure to find new territory
+        ClaimNewTerrOrStartDispersal;
+      end;
+
+      {Now start dispersal IF Lynx has dispersal status}
+
+      if (Lynx^.Status = 1) then
+      begin
+        SetLength(temp_terrX, Tsize);
+        SetLength(temp_terrY, Tsize);
+        ArrayToNegOne(temp_terrX);
+        ArrayToNegOne(temp_terrY);
+
+        start_x := Lynx^.Coor_X;
+        start_y := Lynx^.Coor_Y;
+
+        {This next section is weird, I know... However, for some reason the NSteps function would sometimes randomly produce
+        a number of steps around the 66 milion.... This fixes it so *shrug*}
+        steps := 200;
+        while steps > 100 do steps := NSteps(step_probs);
+
+        Lynx^.DailySteps:= steps;
+        Lynx^.DailyStepsOpen := 0;
+        s := 1;
+
+        while s <= steps do
+        begin
+
+          {Reset variables}
+          xp := Lynx^.Coor_X;
+          yp := Lynx^.Coor_Y;
+          new_dir := -1;
+          TestCoordX := -1;
+          TestCoordY := -1;
+
+          {Calculate new movement direction}
+          new_dir := MoveDir;
+
+          {Calculate coordinates to move to}
+          TestCoordX := xp + dx[new_dir];
+          TestCoordY := yp + dy[new_dir];
+
+          {update home location if Lynx moves from dispersal to open habitat}
+          if (HabitatMapLynx[xp, yp] = 2) and (HabitatMapLynx[TestCoordX, TestCoordY] = 1) then
+          begin
+            Lynx^.homeX := xp;
+            Lynx^.homeY := yp;
+          end;
+
+          {change tohome to false if Lynx is back in dispersal habitat}
+          if (HabitatMapLynx[TestCoordX, TestCoordY] = 2) and tohome = True then
+            Lynx^.return_home := False;
+
+          {Move Lynx and update memory and population}
+          Lynx^.Coor_X := TestCoordX;
+          Lynx^.Coor_Y := TestCoordY;
+          if (new_dir <> 0) then Lynx^.mov_mem := new_dir;
+
+          {Add new location to connection map}
+          if Lynx^.Sex = 'f' then ConnectionMap[TestCoordX, TestCoordY, 0] := ConnectionMap[TestCoordX, TestCoordY, 0] + 1
+          else ConnectionMap[TestCoordX, TestCoordY, 1] := ConnectionMap[TestCoordX, TestCoordY, 1] + 1;
+
+
+          if  (Lynx^.Current_pop = 0) and (whichPop(TestCoordX, TestCoordY) <> 0) and
+          (Lynx^.Previous_pop <> whichPop(TestCoordX, TestCoordY)) then
+          begin
+           new(MigrationEvent);
+
+           MigrationEvent^.year := current_year;
+           MigrationEvent^.sex := Lynx^.Sex;
+           MigrationEvent^.age := Lynx^.Age;
+           MigrationEvent^.natal_pop := Lynx^.Natal_pop;
+           MigrationEvent^.old_pop := Lynx^.Previous_pop;
+           MigrationEvent^.new_pop := whichPop(TestCoordX, TestCoordY);
+
+           MigrationList.Add(MigrationEvent);
+           MigrationEvent := nil;
+          end;
+
+          if (Lynx^.Current_pop <> whichPop(TestCoordX, TestCoordY)) then
+          begin
+           Lynx^.Previous_pop := Lynx^.Current_pop;
+           Lynx^.Current_pop := whichPop(TestCoordX, TestCoordY);
+          end;
+
+
+          {Increase daily steps in open, if new coordinates are in an open habitat}
+          if HabitatMapLynx[TestCoordX, TestCoordY] = 1 then Lynx^.DailyStepsOpen:= Lynx^.DailyStepsOpen + 1;
+
+
+          {If in breeding habitat, check if settlement is possible}
+          if (HabitatMapLynx[TestCoordX, TestCoordY] = 2) and (BreedingHabitatMap[TestCoordX, TestCoordY] = 1) then
+          begin
+
+            test_cell_available := False;
+            test_cell_available := TerritoryCellAvailable(TestCoordX, TestCoordY, Lynx^.Sex, Lynx^.Age);
+
+            if test_cell_available then
+            begin
+              {Look for more breeding habitat until teritory is big enough}
+
+              temp_terrX[0] := TestCoordX;
+              temp_terrY[0] := TestCoordY;
+              TCount := 1;
+
+                // Walk through all 9 cells and find any available territory
+                for i := 1 to 8 do
+                  begin
+                    xi := TestCoordX + dx[i];
+                    yi := TestCoordY + dy[i];
+                    if CanMoveHere(xi, yi) then
+                    if ((HabitatMapLynx[xi, yi] = 2) and (BreedingHabitatMap[xi, yi] = 1)) then
+                    begin
+                      c_available:= False;
+                      c_available:= TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age);
+
+                      if c_available then
+                    begin
+                      temp_terrX[TCount] := xi;
+                      temp_terrY[TCount] := yi;
+
+                      Inc(TCount);
+
+
+                      if TCount = Tsize then Break;
+                      end;
+                    end;
+
+                  end;
+
+
+              {Keep looking in adjacent cells if not enough territory has been found yet}
+                if TCount < Tsize then
+                begin
+                  first_Tcount := TCount;
+                  j := 0;
+                while (TCount < Tsize) and (j < first_Tcount) do
+                begin
+                   for i := 1 to 8 do
+                  begin
+                   xi := temp_terrX[j] + dx[i];
+                   yi := temp_terrY[j] + dy[i];
+
+                   already_terr := false;
+                   for g := 0 to TCount - 1 do
+                     begin
+                      if (xi = temp_terrX[g]) and (yi = temp_terrY[g]) then
+                      begin
+                      already_terr := true;
+                      Break;
+                      end;
+                     end;
+
+                   if not already_terr then
+                    if CanMoveHere(xi, yi) then
+                    if ((HabitatMapLynx[xi, yi] = 2) and (BreedingHabitatMap[xi, yi] = 1)) then
+                    begin
+                    c_available := False;
+                    c_available:= TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age);
+
+                      if c_available then
+                    begin
+                      temp_terrX[TCount] := xi;
+                      temp_terrY[TCount] := yi;
+                      Inc(TCount);
+
+                      if TCount = Tsize then Break;
+                      end;
+                    end;
+                  end;
+                   j := j + 1;
+                 end;
+                  end;
+
+
+                  {Check that enough territory has been foundso territory can be removed and assigned according}
+                  if TCount >= Tsize then
+                  begin
+                    {use temp_terr to remove those coordinates from existing territories}
+                    for xy := 0 to TCount - 1 do
+                      begin
+
+                        with LynxPopulation do
+                        begin
+                          for d := 0 to LynxPopulation.Count - 1 do
+                          begin
+                            temp_ind := Items[d];
+                            if temp_ind^.Status > 1 then
+                            if temp_ind^.Sex = Lynx^.Sex then
+                            begin
+                              with temp_ind^ do
+                                for e := Length(TerritoryX) - 1 downto 0 do
+                                begin
+                                  if (TerritoryX[e] = temp_terrX[xy]) and (TerritoryY[e] = temp_terrY[xy]) then
+                                  begin
+                                    TerritoryX[e] := -1;
+                                    TerritoryY[e] := -1;
+                                  end;
+                                end;
+                            end;
+                          end;
+                        end;
+                      end;
+
+                    {Assign territory to Lynx and change status}
+                    Lynx^.status := 2;
+                      for f := 0 to TCount - 1 do
+                      begin
+                        Lynx^.TerritoryX[f] := temp_terrX[f];
+                        Lynx^.TerritoryY[f] := temp_terrY[f];
+
+                        if Lynx^.Sex = 'f' then
+                        begin
+                        FemalesMap[temp_terrX[f], temp_terrY[f], 0] := Lynx^.Status;
+                        FemalesMap[temp_terrX[f], temp_terrY[f], 1] := Lynx^.Age;
+                        end
+                        else
+                        begin
+                          MalesMap[temp_terrX[f], temp_terrY[f], 0] := Lynx^.Status;
+                          MalesMap[temp_terrX[f], temp_terrY[f], 1] := Lynx^.Age;
+                        end;
+                      end;
+
+                      Break;  // No more steps required, as Lynx is now settled
+
+                    end;
+
+              ArrayToNegOne(temp_terrX);
+              ArrayToNegOne(temp_terrY);
+              TCount := 0;
+              end;
+              end;
+              Inc(s);
+          end;
+
+        end;
+      end;
+
+    end;
+
+end;
+
+
+end.
+

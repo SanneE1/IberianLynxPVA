@@ -1,0 +1,195 @@
+object spatial_Form: Tspatial_Form
+  Left = 113
+  Height = 413
+  Top = 109
+  Width = 918
+  Caption = 'spatial model'
+  ClientHeight = 413
+  ClientWidth = 918
+  LCLVersion = '3.4.0.0'
+  object Run_Button: TButton
+    Left = 1265
+    Height = 24
+    Top = 515
+    Width = 73
+    Anchors = [akRight, akBottom]
+    Caption = 'Run'
+    TabOrder = 0
+    OnClick = Run_ButtonClick
+  end
+  object Exit_Button: TButton
+    Left = 1266
+    Height = 26
+    Top = 341
+    Width = 72
+    Anchors = [akTop, akRight]
+    Caption = 'Exit'
+    TabOrder = 1
+    OnClick = Exit_ButtonClick
+  end
+  object Abort_Button: TButton
+    Left = 1266
+    Height = 26
+    Top = 576
+    Width = 72
+    Anchors = [akRight, akBottom]
+    Caption = 'Abort'
+    TabOrder = 2
+    OnClick = Abort_ButtonClick
+  end
+  object Chart1: TChart
+    Left = 863
+    Height = 272
+    Top = 202
+    Width = 512
+    AxisList = <    
+      item
+        Grid.Color = clSilver
+        Marks.LabelBrush.Style = bsClear
+        Minors = <>
+        Range.UseMin = True
+        Title.LabelFont.Orientation = 900
+        Title.Visible = True
+        Title.Caption = 'population size'
+        Title.LabelBrush.Style = bsClear
+      end    
+      item
+        Grid.Color = clSilver
+        Alignment = calBottom
+        Marks.LabelBrush.Style = bsClear
+        Minors = <>
+        Range.Max = 100
+        Range.UseMax = True
+        Range.UseMin = True
+        Title.Visible = True
+        Title.Caption = 'year'
+        Title.LabelBrush.Style = bsClear
+      end>
+    Extent.UseXMax = True
+    Extent.UseXMin = True
+    Extent.UseYMin = True
+    Extent.XMax = 100
+    Foot.Brush.Color = clBtnFace
+    Foot.Font.Color = clBlue
+    Legend.Visible = True
+    Title.Brush.Color = clBtnFace
+    Title.Font.Color = clBlue
+    Title.Text.Strings = (
+      'TAChart'
+    )
+    Anchors = [akRight, akBottom]
+    object Chart1LineSeries1: TLineSeries
+      Title = 'current run'
+      AxisIndexX = 0
+      AxisIndexY = 0
+    end
+    object Chart1LineSeries2: TLineSeries
+      Title = 'average'
+      LinePen.Color = clRed
+      LinePen.Width = 2
+    end
+  end
+  object Panel1: TPanel
+    Left = 21
+    Height = 265
+    Top = 128
+    Width = 405
+    ClientHeight = 265
+    ClientWidth = 405
+    TabOrder = 4
+    object Label2: TLabel
+      Left = 72
+      Height = 25
+      Top = 8
+      Width = 108
+      Caption = 'PARAMETERS'
+      ParentColor = False
+    end
+    object Edit2: TEdit
+      Left = 144
+      Height = 33
+      Top = 56
+      Width = 76
+      TabOrder = 0
+      Text = '100'
+    end
+    object Label3: TLabel
+      Left = 8
+      Height = 25
+      Top = 56
+      Width = 133
+      Caption = 'Number of years'
+    end
+    object Label4: TLabel
+      Left = 8
+      Height = 25
+      Top = 88
+      Width = 182
+      Caption = 'Number of simulations'
+    end
+    object Edit5: TEdit
+      Left = 145
+      Height = 33
+      Top = 88
+      Width = 75
+      TabOrder = 1
+      Text = '1'
+    end
+    object Label5: TLabel
+      Left = 8
+      Height = 25
+      Top = 120
+      Width = 64
+      Align = alCustom
+      Alignment = taCenter
+      Caption = 'Map file'
+    end
+    object Edit10: TEdit
+      Left = 8
+      Height = 33
+      Top = 144
+      Width = 352
+      TabOrder = 2
+      Text = 'input_data/maps/HabitatMap_500_Peninsula_Revilla_2015_1.txt'
+    end
+    object Label7: TLabel
+      Left = 8
+      Height = 25
+      Top = 184
+      Width = 174
+      Align = alCustom
+      Caption = 'Breeding Habitat Map'
+    end
+  end
+  object Edit3: TEdit
+    Left = 21
+    Height = 33
+    Top = 48
+    Width = 341
+    TabOrder = 5
+    Text = 'input_data/parameter_values_Peninsula_6_250117.txt'
+  end
+  object Edit4: TEdit
+    Left = 32
+    Height = 33
+    Top = 333
+    Width = 353
+    TabOrder = 6
+    Text = 'input_data/maps/BreedingHabitat_500_Peninsula_Fordham_2013.txt'
+  end
+  object Label6: TLabel
+    Left = 23
+    Height = 25
+    Top = 26
+    Width = 107
+    Caption = 'Parameter file'
+  end
+  object CheckBox1: TCheckBox
+    Left = 19
+    Height = 29
+    Top = 96
+    Width = 217
+    Caption = 'Use custom input below'
+    TabOrder = 7
+  end
+end

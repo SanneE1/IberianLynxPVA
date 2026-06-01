@@ -1,0 +1,256 @@
+unit lynx_input_output_functions;
+
+{$mode ObjFPC}{$H+}
+
+interface
+
+uses
+  Classes, SysUtils,
+  general_functions, general_define_units;
+
+procedure ReadParameters_lynx(paramname: string);
+procedure UpdateAbundanceMap;
+procedure WriteMapCSV(filename: string; var arrayData: Array2Dinteger; dimx, dimy: integer);
+procedure WriteMap3CSV(filename: string; var arrayData: Array3Dinteger; dimx, dimy, dimz: integer);
+procedure WritePopulationToCSV(population: TList; filename: string);
+
+implementation
+
+procedure ReadParameters_lynx(paramname: string);
+var
+  LineSplit: TStringArray;
+  Line: string;
+  i, r, spacePos, l: integer;
+  a, param: string;
+  ar: TStringArray;
+  value: real;
+begin
+  setLength(L_surv_array, 22);
+   for l:=0 to 21 do SetLength(L_surv_array[l], 6);
+
+  Assign(filename, ExpandFileName(paramname));
+    reset(filename);
+
+    while not EOF(filename) do
+    begin
+      ReadLn(filename, Line);
+      LineSplit := Line.Split(' ');
+
+      if (LineSplit[0] = 'min_rep_age') then L_min_rep_age := StrToInt(LineSplit[1])
+      else if (LineSplit[0] = 'max_rep_age') then L_max_rep_age := StrToInt(LineSplit[1])
+      else if (LineSplit[0] = 'max_age') then L_max_age := StrToInt(LineSplit[1])
+      else if (LineSplit[0] = 'Tsize') then Tsize := StrToInt(LineSplit[1])
+      else if (LineSplit[0] = 'litter_size') then L_litter_size := StrToFloat(LineSplit[1])
+      else if (LineSplit[0] = 'litter_size_sd') then L_litter_size_sd := StrToFloat(LineSplit[1])
+      else if (LineSplit[0] = 'rep_prob') then L_rep_prob := StrToFloat(LineSplit[1])
+
+      else if (LineSplit[0] = 'surv_0') then
+        for i:=0 to 5 do L_surv_array[0, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_1') then
+        for i:=0 to 5 do L_surv_array[1, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_2') then
+        for i:=0 to 5 do L_surv_array[2, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_3') then
+        for i:=0 to 5 do L_surv_array[3, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_4') then
+        for i:=0 to 5 do L_surv_array[4, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_5') then
+        for i:=0 to 5 do L_surv_array[5, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_6') then
+        for i:=0 to 5 do L_surv_array[6, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_7') then
+        for i:=0 to 5 do L_surv_array[7, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_8') then
+        for i:=0 to 5 do L_surv_array[8, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_9') then
+        for i:=0 to 5 do L_surv_array[9, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_10') then
+        for i:=0 to 5 do L_surv_array[10, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_11') then
+        for i:=0 to 5 do L_surv_array[11, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_12') then
+        for i:=0 to 5 do L_surv_array[12, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_13') then
+        for i:=0 to 5 do L_surv_array[13, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_14') then
+        for i:=0 to 5 do L_surv_array[14, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_15') then
+        for i:=0 to 5 do L_surv_array[15, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_16') then
+        for i:=0 to 5 do L_surv_array[16, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_17') then
+        for i:=0 to 5 do L_surv_array[17, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_18') then
+        for i:=0 to 5 do L_surv_array[18, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_19') then
+        for i:=0 to 5 do L_surv_array[19, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_20') then
+        for i:=0 to 5 do L_surv_array[20, i] := StrToFloat(LineSplit[1+i])
+      else if (LineSplit[0] = 'surv_21') then
+        for i:=0 to 5 do L_surv_array[21, i] := StrToFloat(LineSplit[1+i])
+
+      else if (LineSplit[0] = 'surv_disp_rho') then L_surv_disp_rho := StrToFloat(LineSplit[1])
+      else if (LineSplit[0] = 'alpha_steps') then L_alpha_steps := StrToFloat(LineSplit[1])
+      else if (LineSplit[0] = 'theta_d') then L_theta_d := StrToFloat(LineSplit[1])
+      else if (LineSplit[0] = 'theta_delta') then L_theta_delta := StrToFloat(LineSplit[1])
+      else if (LineSplit[0] = 'delta_theta_long') then L_delta_theta_long := StrToFloat(LineSplit[1])
+      else if (LineSplit[0] = 'delta_theta_f') then L_delta_theta_f := StrToFloat(LineSplit[1])
+      else if (LineSplit[0] = 'L') then L_L := StrToInt(LineSplit[1])
+      else if (LineSplit[0] = 'N_d') then L_N_d := StrToInt(LineSplit[1])
+      else if (LineSplit[0] = 'beta') then L_beta := StrToFloat(LineSplit[1])
+      else if (LineSplit[0] = 'gamma') then L_gamma := StrToFloat(LineSplit[1])
+      else if (LineSplit[0] = 'n_cycles') then n_cycles := StrToInt(LineSplit[1])
+
+   end;
+end;
+
+procedure UpdateAbundanceMap;
+var
+  a, b, c, x, y: integer;
+  s: string;
+begin
+
+  for a := 0 to MapdimX - 1 do
+    for b := 0 to Mapdimy - 1 do
+      for c := 0 to 1 do           // where 0 is status, 1 is ID
+    begin
+      Malesmap[a, b, c] := -1;      // Empty maps to fill with status and age below
+      Femalesmap[a, b, c] := -1;
+    end;
+
+
+  with LynxPopulation do
+  begin
+    for a := 0 to LynxPopulationSize - 1 do
+    begin
+      Lynx := Items[a];
+      if Lynx^.Status >=2 then
+      begin
+        for b := 0 to length(Lynx^.TerritoryX) - 1 do
+        begin
+          x := Lynx^.TerritoryX[b];
+          y := Lynx^.TerritoryY[b];
+          s := Lynx^.sex;
+
+          if ((x < 0) and (y < 0)) or ((x > MapdimX) or (y > MapdimY)) then
+            Continue;
+
+          if (s = 'f') then
+            begin
+            Femalesmap[x, y, 0] := Lynx^.Status;
+            Femalesmap[x, y, 1] := Lynx^.Age;
+            end;
+          if (s = 'm') then
+            begin
+            Malesmap[x, y, 0] := Lynx^.Status;
+            Malesmap[x, y, 1] := Lynx^.Age;
+            end;
+        end;
+      end;
+    end;
+  end;
+
+end;
+
+procedure WriteMapCSV(filename: string; var arrayData: Array2Dinteger; dimx, dimy: integer);
+var
+  ix, iy: integer;
+  outfile: Text;
+begin
+  Assign(outfile, filename);
+  rewrite(outfile);
+
+  // Loop over the arrayData and write each element to the CSV
+  for iy := 1 to dimy do
+  begin
+    for ix := 1 to dimx do
+    begin
+      // Write each value, followed by a comma, except for the last value in the row
+      if ix < dimx then
+        Write(outfile, arrayData[ix, iy], ',')
+      else
+        Write(outfile, arrayData[ix, iy]);  // No comma at the end of the row
+    end;
+    writeln(outfile);  // Move to the next line in the CSV file
+  end;
+
+  Close(outfile);
+end;
+
+procedure WriteMap3CSV(filename: string; var arrayData: Array3Dinteger; dimx, dimy, dimz: integer);
+var
+  ix, iy: integer;
+  outfile: Text;
+begin
+  Assign(outfile, filename);
+  rewrite(outfile);
+
+  // Loop over the arrayData and write each element to the CSV
+  for iy := 1 to dimy do
+  begin
+    for ix := 1 to dimx do
+    begin
+      // Write each value, followed by a comma, except for the last value in the row
+      if ix < dimx then
+        Write(outfile, arrayData[ix, iy, dimz], ',')
+      else
+        Write(outfile, arrayData[ix, iy, dimz]);  // No comma at the end of the row
+    end;
+    writeln(outfile);  // Move to the next line in the CSV file
+  end;
+
+  Close(outfile);
+end;
+
+procedure WritePopulationToCSV(population: TList; filename: string);
+var
+  csvFile: TextFile;
+  i, j: integer;
+begin
+
+  AssignFile(csvFile, filename);
+
+  if (current_year = start_year) then
+  begin
+    Rewrite(csvFile);
+    // Write header
+    WriteLn(csvFile, 'Year,Sex,Age,Status,Coor_X,Coor_Y,Natal_pop,Previous_pop,Current_pop,Territory_XY');
+  end;
+
+  append(csvFile);
+  // Write data for each Lynx
+  for i := 0 to population.Count - 1 do
+  begin
+    Write(csvFile, current_year, ',');
+    Lynx := PLynx(population[i]);
+
+    // Write Lynx information
+    Write(csvFile, Lynx^.sex, ',');
+    Write(csvFile, Lynx^.Age, ',');
+    Write(csvFile, Lynx^.Status, ',');
+    Write(csvFile, Lynx^.Coor_X, ',');
+    Write(csvFile, Lynx^.Coor_Y, ',');
+    Write(csvFile, Lynx^.Natal_pop, ',');
+    Write(csvFile, Lynx^.Previous_pop, ',');
+    Write(csvFile, Lynx^.Current_pop, ',');
+
+    // Write territory coordinates
+    for j := 0 to length(Lynx^.TerritoryX) - 1 do
+    begin
+
+      Write(csvFile, Lynx^.TerritoryX[j], '/');
+      Write(csvFile, Lynx^.TerritoryY[j]);
+
+      // Add comma if not last coordinate
+      if j < length(Lynx^.TerritoryX) - 1 then
+        Write(csvFile, ';');
+    end;
+
+    WriteLn(csvFile); // End of current Lynx's data
+  end;
+
+  CloseFile(csvFile);
+end;
+
+end.
+

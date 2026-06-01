@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="12"/>
+    <ManyBuildModesSelection Value="Debug,Release,Debug_Linux,Release_Linux"/>
+    <BuildModes Active="Release_Linux"/>
+    <Units>
+      <Unit>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
+        <TopLine Value="49"/>
+        <CursorPos X="22" Y="63"/>
+        <UsageCount Value="158"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="Model_cmd.lpr"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="46"/>
+        <CursorPos X="15" Y="75"/>
+        <UsageCount Value="77"/>
+      </Unit>
+      <Unit>
+        <Filename Value="general_define_units.pas"/>
+        <EditorIndex Value="6"/>
+        <TopLine Value="176"/>
+        <CursorPos Y="194"/>
+        <UsageCount Value="77"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="lynx\lynx_input_output_functions.pas"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos Y="19"/>
+        <FoldState Value=" T3I0{c3 pj6m40mT"/>
+        <UsageCount Value="77"/>
+      </Unit>
+      <Unit>
+        <Filename Value="lynx\lynx_dispersal_assist_functions.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="427"/>
+        <CursorPos X="78" Y="449"/>
+        <UsageCount Value="77"/>
+      </Unit>
+      <Unit>
+        <Filename Value="lynx\lynx_population_dynamics.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="84"/>
+        <CursorPos X="3" Y="111"/>
+        <UsageCount Value="77"/>
+      </Unit>
+      <Unit>
+        <Filename Value="rabbit\rabbit_population_dynamics.pas"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="94"/>
+        <CursorPos X="150" Y="123"/>
+        <UsageCount Value="77"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="rabbit\rabbit_vital_rates.pas"/>
+        <EditorIndex Value="4"/>
+        <TopLine Value="184"/>
+        <CursorPos X="11" Y="196"/>
+        <UsageCount Value="77"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="C:\lazarus\fpc\3.2.2\source\rtl\objpas\sysutils\sysstrh.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="188"/>
+        <CursorPos X="10" Y="196"/>
+        <UsageCount Value="10"/>
+      </Unit>
+      <Unit>
+        <Filename Value="general_functions.pas"/>
+        <EditorIndex Value="5"/>
+        <TopLine Value="31"/>
+        <CursorPos X="18" Y="46"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="rabbit\rabbit_input_output_functions.pas"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="13"/>
+        <CursorPos X="30" Y="135"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="population_dynamics.pas"/>
+        <UnitName Value="Population_dynamics"/>
+        <EditorIndex Value="1"/>
+        <CursorPos X="12" Y="70"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit>
+    </Units>
+    <JumpHistory HistoryIndex="29">
+      <Position>
+        <Filename Value="rabbit\rabbit_vital_rates.pas"/>
+        <Caret Line="191" TopLine="176"/>
+      </Position>
+      <Position>
+        <Filename Value="rabbit\rabbit_vital_rates.pas"/>
+        <Caret Line="137" Column="24" TopLine="127"/>
+      </Position>
+      <Position>
+        <Filename Value="rabbit\rabbit_vital_rates.pas"/>
+        <Caret Line="186" Column="51" TopLine="176"/>
+      </Position>
+      <Position>
+        <Filename Value="rabbit\rabbit_population_dynamics.pas"/>
+        <Caret Line="43" Column="36" TopLine="30"/>
+      </Position>
+      <Position>
+        <Filename Value="rabbit\rabbit_vital_rates.pas"/>
+        <Caret Line="186" Column="7" TopLine="168"/>
+      </Position>
+      <Position>
+        <Filename Value="rabbit\rabbit_population_dynamics.pas"/>
+        <Caret Line="81" Column="31" TopLine="7"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="138" Column="6"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="49" TopLine="34"/>
+      </Position>
+      <Position>
+        <Filename Value="general_define_units.pas"/>
+        <Caret Line="163" Column="25" TopLine="150"/>
+      </Position>
+      <Position>
+        <Filename Value="general_define_units.pas"/>
+        <Caret Line="191" Column="28" TopLine="174"/>
+      </Position>
+      <Position>
+        <Filename Value="general_define_units.pas"/>
+        <Caret Line="190" Column="28" TopLine="178"/>
+      </Position>
+      <Position>
+        <Filename Value="general_define_units.pas"/>
+        <Caret Line="76" Column="32" TopLine="63"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="46" Column="144" TopLine="37"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="48" TopLine="37"/>
+      </Position>
+      <Position>
+        <Filename Value="population_dynamics.pas"/>
+        <Caret Line="39" TopLine="26"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="48" TopLine="26"/>
+      </Position>
+      <Position>
+        <Filename Value="population_dynamics.pas"/>
+        <Caret Line="39" TopLine="26"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="85" Column="25" TopLine="68"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="134" Column="8" TopLine="110"/>
+      </Position>
+      <Position>
+        <Filename Value="rabbit\rabbit_population_dynamics.pas"/>
+        <Caret Line="124" Column="13" TopLine="68"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="145" Column="41" TopLine="6"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="34" Column="48" TopLine="9"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="35" TopLine="25"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="107" Column="137" TopLine="78"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="23" Column="3" TopLine="15"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="98" Column="26" TopLine="81"/>
+      </Position>
+      <Position>
+        <Filename Value="rabbit\rabbit_population_dynamics.pas"/>
+        <Caret Line="13" Column="11"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="37" Column="13" TopLine="18"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="98" Column="144" TopLine="85"/>
+      </Position>
+      <Position>
+        <Filename Value="Rabbit_calibration.lpr"/>
+        <Caret Line="118" Column="18" TopLine="85"/>
+      </Position>
+    </JumpHistory>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes ActiveMode="default">
+        <Mode Name="default">
+          <local>
+            <CommandLineParams Value="input_data/Parameters_rabbit_solo.txt output_dir_Rabbit"/>
+            <WorkingDirectory Value="C:\Users\z1512834z\Documents\01_Natura_Connect\00_Lynx_Rabbit_model\Lynx_Rabbit_SIBM"/>
+          </local>
+        </Mode>
+      </Modes>
+    </RunParams>
+    <HistoryLists>
+      <List Name="LaunchingApplication" Type="File" Count="1">
+        <Item1 Value="C:\windows\system32\cmd.exe /C ${TargetCmdLine}"/>
+      </List>
+      <List Name="CommandLineParameters" Count="4">
+        <Item1 Value="input_data/Parameters_rabbit_solo.txt output_dir_Rabbit"/>
+        <Item2 Value="../input_data/Parameters_rabbit_solo.txt output_dir_Rabbit"/>
+        <Item3 Value="input_data/Parameters_rabbit_calibration.txt output_dir_Rabbit"/>
+        <Item4 Value="input_data/Parameters_rabbit_calibration.txt output_dir_Rabbit 69 0.54 0.15 0.19 0.87"/>
+      </List>
+      <List Name="WorkingDirectory" Type="File" Count="1">
+        <Item1 Value="C:\Users\z1512834z\Documents\01_Natura_Connect\00_Lynx_Rabbit_model\Lynx_Rabbit_SIBM"/>
+      </List>
+    </HistoryLists>
+  </ProjectSession>
+  <Debugging>
+    <BreakPoints>
+      <Item>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="lynx\lynx_input_output_functions.pas"/>
+        <Line Value="106"/>
+      </Item>
+      <Item>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="lynx\lynx_input_output_functions.pas"/>
+        <Line Value="108"/>
+      </Item>
+    </BreakPoints>
+    <Watches>
+      <Item>
+        <Expression Value="R_lambda"/>
+      </Item>
+      <Item>
+        <Expression Value="R_dens_opt"/>
+      </Item>
+      <Item>
+        <Expression Value="R_sigma"/>
+      </Item>
+      <Item>
+        <Expression Value="disp_dist"/>
+      </Item>
+      <Item>
+        <Expression Value="RabbitPopulationSize"/>
+      </Item>
+    </Watches>
+  </Debugging>
+</CONFIG>

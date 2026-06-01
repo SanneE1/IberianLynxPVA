@@ -1,0 +1,516 @@
+{vs. 1.0  1/9/2015
+Revilla, E. (in press). Individual and agent based models in population ecology and conservation biology.
+In: Population Ecology in Practice: Underused, Misused, and Abused Methods.
+Eds Murray DL, Sandercock B. John Wiley & Sons Ltd. ISBN/ISSN: 9780470674130}
+
+unit spatial_unit;
+
+{$mode objfpc}{$H+}
+
+interface
+
+uses
+  Classes, SysUtils, FileUtil, TAGraph, TASeries, Forms, Controls, Graphics,
+  Dialogs, StdCtrls, ExtCtrls, math, LCLType;
+
+type           {here you declare the data structure for you individuals}
+  PAgent=^Agent;
+  Agent = record
+    sex : string[1];
+    Age : integer;
+    Status : Shortint;
+    Coor_X : Word;
+    Coor_Y : Word;
+    N_steps : integer;
+    natal_X : Word;
+    natal_Y : Word;
+
+  end;
+
+  { Tspatial_Form }
+
+  Tspatial_Form = class(TForm)
+    Chart1: TChart;
+    Chart1LineSeries1: TLineSeries;
+    Chart1LineSeries2: TLineSeries;
+    Chart2: TChart;
+    Chart2LineSeries1: TLineSeries;
+    Chart2LineSeries2: TLineSeries;
+    Chart2LineSeries3: TLineSeries;
+    Chart2LineSeries4: TLineSeries;
+    Chart2LineSeries5: TLineSeries;
+    Chart2LineSeries6: TLineSeries;
+    Chart3: TChart;
+    Edit10: TEdit;
+    Edit11: TEdit;
+    Edit12: TEdit;
+    Edit13: TEdit;
+    Edit14: TEdit;
+    Edit15: TEdit;
+    Edit2: TEdit;
+    Edit3: TEdit;
+    Edit4: TEdit;
+    Edit5: TEdit;
+    Edit6: TEdit;
+    Edit7: TEdit;
+    Edit8: TEdit;
+    Edit9: TEdit;
+    Exit_Button: TButton;
+    Abort_Button: TButton;
+    Edit1: TEdit;
+    Image1: TImage;
+    Label1: TLabel;
+    Label10: TLabel;
+    Label11: TLabel;
+    Label12: TLabel;
+    Label13: TLabel;
+    Label14: TLabel;
+    Label15: TLabel;
+    Label16: TLabel;
+    Label17: TLabel;
+    Label2: TLabel;
+    Label3: TLabel;
+    Label4: TLabel;
+    Label5: TLabel;
+    Label6: TLabel;
+    Label7: TLabel;
+    Label8: TLabel;
+    Label9: TLabel;
+    Memo1: TMemo;
+    Panel1: TPanel;
+    Run_Button: TButton;
+    procedure Abort_ButtonClick(Sender: TObject);
+    procedure Exit_ButtonClick(Sender: TObject);
+    procedure Run_ButtonClick(Sender: TObject);
+  private
+    { private declarations }
+  public
+    { public declarations }
+    Procedure Pop_dynamics;
+  end;
+
+var               {here you declare global variables}
+  spatial_Form: Tspatial_Form;
+  Population : Tlist;
+  Individual : PAgent;
+  n_ini : integer;
+  rep_prob: real;
+  AlphaR:real;
+  BetaR:real;
+  surv_prob: real;
+  AlphaS:real;
+  BetaS:real;
+  sett_prob: real;
+  avg_steps:integer;
+  AlphaD:real;
+  BetaD:real;
+  sink:real;
+  max_age:integer;
+  populationsize: longint;
+  n_sim: integer;
+  n_extint:integer;
+  sum_distance_X:integer;
+  sum_distance_Y:integer;
+  current_sim:integer;
+  max_pop_size: integer;
+  pop_size: array[1..100] of integer;
+  sum_pop_size: array[1..100] of integer;
+  n_sim_no_ext: array[1..100] of integer;
+  to_file_out: TextFile;
+  filename:text;
+  HabitatMap: array of array of byte;
+  MalesMap: array of array of byte;
+  AbundanceMap: array of array of integer;
+  Mapdimx,Mapdimy: integer;
+  mapname:string;
+  dx:array[0..8] of integer =(0, 0, 1, 1, 1, 0,-1,-1,-1);
+  dy:array[0..8] of integer =(0, 1, 1, 0,-1,-1,-1, 0, 1);
+  tempX,tempY: integer;
+
+
+const             {here you declare constants}
+  max_years = 100;
+  min_rep_age = 3;
+  file_name = 'output.txt';
+
+implementation
+
+{$R *.lfm}
+
+{ Tspatial_Form }
+
+procedure ReadMap(mapname:string);
+var
+ix,iy:integer;
+
+begin
+  assign(filename,mapName);
+  reset(filename);
+  readln(filename,Mapdimx,Mapdimy);
+  SetLength(HabitatMap, Mapdimx+1, Mapdimy+1);
+  SetLength(MalesMap, Mapdimx+1, Mapdimy+1);
+  SetLength(AbundanceMap, Mapdimx+1, Mapdimy+1);
+
+  for iy:=1 to Mapdimy do
+  begin
+    begin
+      for ix:=1 to Mapdimx do read(filename,HabitatMap[ix,iy]);
+    end;
+    readln(filename);
+  end;
+
+  close(filename);
+end;
+
+
+function randomPoisson(mean: integer): integer;
+{pseudorandom Poisson distributed number genetrator, Donald Knuth's algorithm}
+const
+  RESOLUTION = 1000;
+var
+  k: integer;
+  b, l: real;
+begin
+  //assert(mean > 0, 'mean < 1');
+  k:= 0;
+  b:= 1;
+  l:= exp(-mean);
+  while b > l do
+  begin
+    k:= k + 1;
+    b:= b * random(RESOLUTION)/RESOLUTION;
+  end;
+  if mean<= 0 then randomPoisson:=0 else randomPoisson:= k - 1;
+end;
+
+
+Function RangeX(x:integer):integer;
+begin
+  Rangex:=x;
+  {Torus
+  if x<1 then Rangex:=Mapdimx+x;
+  if x>Mapdimx then Rangex:=x-Mapdimx;}
+
+  //reflected
+  if x<1 then Rangex:=1;
+  if x>Mapdimx then Rangex:=Mapdimx;
+end;
+
+Function RangeY(y:integer):integer;
+begin
+  Rangey:=y;
+  {Torus
+  if y<1 then Rangey:=Mapdimy+y;
+  if y>Mapdimy then Rangey:=y-Mapdimy;}
+
+  //reflected
+  if y<1 then Rangey:=1;
+  if y>Mapdimy then Rangey:=Mapdimy;
+end;
+
+
+Procedure Startpopulation;
+var
+a:integer;
+begin
+  Population:=Tlist.create;
+  with population do
+  begin
+    for a:=1 to n_ini do
+    begin
+      new(Individual);
+      Individual^.age:=random(10);   {alternative: Individual^.age:=0; }
+      if random<0.5 then Individual^.sex:= 'f' else Individual^.sex:= 'm';
+      Individual^.status:=0;     {0 for non breeding and dispersers; 1 for settled individuals}
+      Individual^.Coor_X:=random(mapdimx) + 1;    {position of the initial animals}
+      Individual^.Coor_Y:=random(mapdimy) + 1;
+      Individual^.N_steps:=Randompoisson(avg_steps);
+      Population.add(Individual);
+    end;
+  end;
+end;
+
+Procedure Reproduction;
+var
+a, localpop:integer;
+current_rep:real;
+temp_X,temp_Y:word;
+begin
+  with population do
+  begin
+    populationsize:=population.count;
+    if (populationsize>1) then
+    for a:=0 to populationsize-1 do
+    begin
+      Individual:=Items[a];
+      Localpop:=Abundancemap[individual^.Coor_X,individual^.Coor_Y]; // now we use local population size
+      if HabitatMap[individual^.Coor_X,individual^.Coor_Y]=1 then
+        current_rep:=rep_prob*sink/(1+AlphaR*power(localpop,BetaR)) else
+          current_rep:=rep_prob/(1+AlphaR*power(localpop,BetaR));
+
+      if individual^.sex='f' then
+      if individual^.status=1 then
+      if individual^.age>= min_rep_age then
+      if Malesmap[individual^.Coor_X,individual^.Coor_X]=1 then   // now the condition for male availability is local
+      if random<current_rep then
+      begin
+        Temp_X:= individual^.Coor_X;   {keep the location of the mother}
+        Temp_Y:= individual^.Coor_Y;
+        New(Individual);
+        Individual^.age:=0;
+        if random<0.5 then Individual^.sex:= 'f' else Individual^.sex:= 'm';
+        Individual^.status:=0;
+        Individual^.Coor_X:=Temp_X;    {they inherit the location of the mother}
+        Individual^.Coor_Y:=Temp_Y;
+        Individual^.N_steps:=Randompoisson(avg_steps);
+        Population.add(Individual);
+      //in case of counting newborns in the density dependence for the remaining individuals that can breed
+      //Abundancemap[individual^.Coor_X,individual^.Coor_Y]:=Abundancemap[individual^.Coor_X,individual^.Coor_Y]+1;
+      end;
+    end;
+  end;
+end;
+
+
+
+Procedure survival;
+var
+a,b, LocalPop:integer;
+current_surv:real;
+die:string;
+//temp_X,temp_Y:word;
+begin
+  {survival part}
+  with population do
+  begin
+    b:=-1;
+    populationsize:=population.count;
+    for a:=0 to populationsize-1 do  {the index in the list starts at 0}
+    begin
+      b:=b+1;
+      individual:=items[b]; {we need a new index b to be able to delete the individuals from the list}
+      Localpop:=Abundancemap[individual^.Coor_X,individual^.Coor_Y];
+
+      if HabitatMap[individual^.Coor_X,individual^.Coor_Y]=1 then
+        current_surv:=surv_prob*sink/(1+AlphaS*power(Localpop,BetaS)) else
+          current_surv:=surv_prob/(1+AlphaS*power(Localpop,BetaS));
+
+      die:='no';
+      if individual^.age>max_age then die:='yes' else
+        if random>current_surv then die:='yes';
+      if die='yes' then
+      begin
+        delete(b);
+        dispose(individual);
+        b:=b-1;           {to keep the index right}
+        //in case we want to remove the effect of this indiviudal for density dependence in survival
+        //Abundancemap[temp_X,temp_Y]:=Abundancemap[temp_X,temp_Y]-1;
+      end;
+    end;
+  end;
+
+  {aging part + keeping track of the availability of males + local abundance}
+  populationsize:=population.count;
+  for a:=0 to MapdimX-1 do
+    for b:=0 to Mapdimy-1 do
+    begin
+        Malesmap[a,b]:=0;
+        Abundancemap[a,b]:=0;
+    end;
+
+  with population do
+  begin
+    for a:=0 to populationsize-1 do
+    begin
+      Individual:=Items[a];
+      //aging
+      Individual^.age:=Individual^.age+1;
+      //abdundance map
+      Abundancemap[individual^.Coor_X,individual^.Coor_Y]:=Abundancemap[individual^.Coor_X,individual^.Coor_Y]+1;
+      //available males in each grid cell
+      if individual^.sex='m' then
+        Malesmap[individual^.Coor_X,individual^.Coor_X]:=1;
+    end;
+  end;
+
+end;
+
+
+Procedure dispersal;
+var
+a,b,n, localpop, xp,yp, tempsteps:integer;
+local_sett_prob:real;
+
+
+begin
+  with population do
+  begin
+    populationsize:=population.count;
+    for a:=0 to populationsize-1 do
+    begin
+      individual:=items[a];
+      if Individual^.status=0 then //only for those that can disperse
+      begin
+        tempsteps:=individual^.N_steps;
+        b:=1;
+        while b<=tempsteps do
+        begin
+          //new corrdinates
+          n:=trunc(random(9));
+          xp:=RangeX(Individual^.Coor_x+dx[n]);
+          n:=trunc(random(9));
+          yp:=RangeY(Individual^.Coor_Y+dy[n]);
+          Individual^.Coor_X:=xp;
+          Individual^.Coor_Y:=yp;
+          if HabitatMap[xp,yp]>0 then
+          begin
+            localpop:=Abundancemap[xp,yp];
+            if HabitatMap[xp,yp]=1 then local_sett_prob:=sett_prob*sink/(1+AlphaD*power(localpop,BetaD)) else
+             local_sett_prob:=sett_prob/(1+AlphaD*power(localpop,BetaD));
+            if random<local_sett_prob then  //settlement
+            begin
+              Individual^.status:=1;
+              b:=tempsteps;
+              Abundancemap[xp,yp]:=Abundancemap[xp,yp]+1;
+            end;
+          end;
+          b:=b+1;
+        end;
+      end;
+    end;
+
+  end;
+
+end;
+
+
+Procedure Tspatial_Form.Pop_dynamics;
+var
+a:integer;
+
+begin
+  with population do
+  begin
+    for a:=1 to max_years do
+    begin
+      reproduction;   //call procedure for reproduction
+      survival;       //call procedure for survival
+      dispersal;      //call procedure for dispersal
+      {ploting pop size}
+      if max_pop_size<populationsize then max_pop_size:=populationsize;
+      if max_pop_size>Chart1.extent.YMax then
+      begin
+        Chart1.extent.YMax:=max_pop_size;
+        application.processmessages;
+      end;
+      pop_size[a]:=populationsize;
+      sum_pop_size[a]:=sum_pop_size[a]+ populationsize;
+      if populationsize>0 then n_sim_no_ext[a]:=n_sim_no_ext[a]+1;
+      {plot trajectory}
+      Chart1LineSeries1.addxy(a,populationsize);
+
+    end;
+    if  populationsize=0 then N_extint:=N_extint+1;
+  end;
+end;
+
+
+procedure Tspatial_Form.Run_ButtonClick(Sender: TObject);
+var
+  a,b: integer;
+  t:string;
+
+begin
+  randomize; {initialize the pseudorandom number generator}
+  val(Edit1.text,n_ini);  {read parameter values from the form}
+  val(Edit2.text,rep_prob);
+  val(Edit3.text,surv_prob);
+  val(Edit4.text,max_age);
+  val(Edit5.text,n_sim);
+
+  val(Edit6.text,AlphaS);
+  val(Edit7.text,BetaS);
+  val(Edit8.text,AlphaR);
+  val(Edit9.text,BetaR);
+
+  val(Edit11.text,sett_prob);
+  val(Edit12.text,AlphaD);
+  val(Edit13.text,BetaD);
+  val(Edit14.text,avg_steps);
+  val(Edit15.text,sink);
+
+  mapname:=Edit10.text;
+  readmap(mapname);
+
+  // plot density dependent rate responses
+  Chart2LineSeries1.clear;
+  Chart2LineSeries2.clear;
+  Chart2LineSeries3.clear;
+  Chart2LineSeries4.clear;
+  Chart2LineSeries5.clear;
+  Chart2LineSeries6.clear;
+  //in source habitat
+  for b:=1 to max_years do Chart2LineSeries1.addxy(b,rep_prob/(1+AlphaR*power(b,BetaR)));//reproduction
+  for b:=1 to max_years do Chart2LineSeries2.addxy(b,surv_prob/(1+AlphaS*power(b,BetaS)));//survival
+  for b:=1 to max_years do Chart2LineSeries3.addxy(b,sett_prob/(1+AlphaD*power(b,BetaD)));//settlement
+  //in sink habitat
+  for b:=1 to max_years do Chart2LineSeries4.addxy(b,rep_prob*sink/(1+AlphaR*power(b,BetaR)));//reproduction
+  for b:=1 to max_years do Chart2LineSeries5.addxy(b,surv_prob*sink/(1+AlphaS*power(b,BetaS)));//survival
+  for b:=1 to max_years do Chart2LineSeries6.addxy(b,sett_prob*sink/(1+AlphaD*power(b,BetaD)));//settlement
+
+
+  N_extint:=0;
+
+  AssignFile(to_file_out, file_name);
+  rewrite(to_file_out); {create txt file}
+
+  for a:=1 to max_years do sum_pop_size[a]:=0;
+  for a:=1 to max_years do n_sim_no_ext[a]:=0;
+
+  for current_sim:=1 to n_sim do
+  begin
+
+    max_pop_size:=0;
+    Startpopulation; {call the procedure to initialize your population}
+    Pop_dynamics;    {call the procedure to run the population dynamics}
+
+
+    {plot population trayectories}
+    Chart1LineSeries1.clear;
+    Chart1LineSeries2.clear;
+
+    for b:=1 to max_years do Chart1LineSeries1.addxy(b,pop_size[b]);
+    application.processmessages;
+    if (current_sim>1) then
+    if (n_sim>1)and (n_extint<>n_sim) then
+    for b:=1 to max_years do Chart1LineSeries2.addxy(b,sum_pop_size[b]/n_sim_no_ext[b]);  //now we calculate the avg only when the population is not extinct
+//  for b:=1 to max_years do Chart1LineSeries2.addxy(b,sum_pop_size[b]/current_sim);
+
+    {extinction probability}
+    if current_sim>0 then str(n_extint/current_sim:3:2,t);
+    memo1.text:=t;
+
+
+    {save the results to a text file}
+    append(to_file_out);
+    for b:=1 to max_years do writeln(to_file_out,current_sim,' ',b,' ',pop_size[b]);    {we save all simulations}
+    if current_sim= n_sim then
+      for b:=1 to max_years do writeln(to_file_out,'avg',' ',b,' ',sum_pop_size[b]/current_sim); {and the average of all simulations}
+    CloseFile(to_file_out);
+
+    application.processmessages;
+  end;
+end;
+
+procedure Tspatial_Form.Exit_ButtonClick(Sender: TObject);
+begin
+  close;
+end;
+
+procedure Tspatial_Form.Abort_ButtonClick(Sender: TObject);
+begin
+  halt;
+end;
+
+end.
+

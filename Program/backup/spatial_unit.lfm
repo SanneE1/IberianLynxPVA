@@ -1,0 +1,190 @@
+object spatial_Form: Tspatial_Form
+  Left = 113
+  Height = 603
+  Top = 109
+  Width = 1389
+  Caption = 'spatial model'
+  ClientHeight = 603
+  ClientWidth = 1389
+  DesignTimePPI = 144
+  object Run_Button: TButton
+    Left = 1095
+    Height = 36
+    Top = 328
+    Width = 110
+    Anchors = []
+    Caption = 'Run'
+    TabOrder = 0
+    OnClick = Run_ButtonClick
+  end
+  object Exit_Button: TButton
+    Left = 1094
+    Height = 39
+    Top = 363
+    Width = 108
+    Anchors = []
+    Caption = 'Exit'
+    TabOrder = 1
+    OnClick = Exit_ButtonClick
+  end
+  object Abort_Button: TButton
+    Left = 1094
+    Height = 39
+    Top = 402
+    Width = 108
+    Anchors = []
+    Caption = 'Abort'
+    TabOrder = 2
+    OnClick = Abort_ButtonClick
+  end
+  object Chart1: TChart
+    Left = 588
+    Height = 267
+    Top = 24
+    Width = 756
+    AxisList = <    
+      item
+        Grid.Color = clSilver
+        Marks.LabelBrush.Style = bsClear
+        Minors = <>
+        Range.UseMin = True
+        Title.LabelFont.Orientation = 900
+        Title.Visible = True
+        Title.Caption = 'population size'
+        Title.LabelBrush.Style = bsClear
+      end    
+      item
+        Grid.Color = clSilver
+        Alignment = calBottom
+        Marks.LabelBrush.Style = bsClear
+        Minors = <>
+        Range.Max = 100
+        Range.UseMax = True
+        Range.UseMin = True
+        Title.Visible = True
+        Title.Caption = 'year'
+        Title.LabelBrush.Style = bsClear
+      end>
+    Extent.UseXMax = True
+    Extent.UseXMin = True
+    Extent.UseYMin = True
+    Extent.XMax = 100
+    Foot.Brush.Color = clBtnFace
+    Foot.Font.Color = clBlue
+    Legend.Visible = True
+    Title.Brush.Color = clBtnFace
+    Title.Font.Color = clBlue
+    Title.Text.Strings = (
+      'TAChart'
+    )
+    object Chart1LineSeries1: TLineSeries
+      Title = 'current run'
+      AxisIndexX = 0
+      AxisIndexY = 0
+    end
+    object Chart1LineSeries2: TLineSeries
+      Title = 'average'
+      LinePen.Color = clRed
+      LinePen.Width = 2
+    end
+  end
+  object Edit5: TEdit
+    Left = 691
+    Height = 33
+    Top = 319
+    Width = 112
+    Anchors = []
+    TabOrder = 4
+    Text = '1'
+  end
+  object Edit10: TEdit
+    Left = 728
+    Height = 33
+    Top = 360
+    Width = 339
+    Anchors = []
+    TabOrder = 5
+    Text = 'input_data/old_donana.txt'
+  end
+  object Panel1: TPanel
+    Left = -152
+    Height = 1116
+    Top = 24
+    Width = 532
+    ClientHeight = 1116
+    ClientWidth = 532
+    TabOrder = 6
+    object Edit1: TEdit
+      Left = 360
+      Height = 33
+      Top = 42
+      Width = 112
+      TabOrder = 0
+      Text = '100'
+    end
+    object Label1: TLabel
+      Left = 170
+      Height = 25
+      Top = 48
+      Width = 168
+      Caption = 'Initial population size'
+      ParentColor = False
+    end
+    object Label2: TLabel
+      Left = 204
+      Height = 25
+      Top = 12
+      Width = 108
+      Caption = 'PARAMETERS'
+      ParentColor = False
+    end
+    object Edit2: TEdit
+      Left = 358
+      Height = 33
+      Top = 98
+      Width = 114
+      TabOrder = 1
+      Text = '100'
+    end
+    object Label3: TLabel
+      Left = 192
+      Height = 25
+      Top = 98
+      Width = 133
+      Caption = 'Number of years'
+    end
+  end
+  object Label4: TLabel
+    Left = 488
+    Height = 25
+    Top = 323
+    Width = 182
+    Anchors = []
+    Caption = 'Number of simulations'
+  end
+  object Label5: TLabel
+    Left = 587
+    Height = 25
+    Top = 362
+    Width = 64
+    Anchors = []
+    Caption = 'Map file'
+  end
+  object Edit3: TEdit
+    Left = 730
+    Height = 33
+    Top = 404
+    Width = 333
+    Anchors = []
+    TabOrder = 7
+    Text = 'input_data/parameter_values.txt'
+  end
+  object Label6: TLabel
+    Left = 549
+    Height = 25
+    Top = 408
+    Width = 107
+    Anchors = []
+    Caption = 'Parameter file'
+  end
+end
