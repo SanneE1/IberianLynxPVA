@@ -4,11 +4,11 @@ library(lubridate)
 
 # density_threshold = 5
 # n_months = 12
-# rabbit_folder = "data/Rabbit_results/"
+# rabbit_folder = "data/Rabbit_output/"
 # asc_dir = "data/GIS_maps/breeding_maps1"
 
-source("R/Rasterize_output_maps.R")
-source("R/transform_asc_to_input_maps.R")
+source(file.path("scripts", "r", "Rasterize_output_maps.R"))
+source(file.path("scripts", "r", "transform_asc_to_input_maps.R"))
 
 Create_breeding_maps <- function(rabbit_folder, density_threshold, n_months, asc_dir,
                                  hab_file = file.path("data", "GIS_maps", "Lynx_HabitatMap_LUCAS_2015.asc")) {
@@ -42,6 +42,19 @@ Create_breeding_maps <- function(rabbit_folder, density_threshold, n_months, asc
   process_folder(asc_dir, file.path("data", "model_input", "maps", basename(asc_dir)))
   
   return(file.path("data", "model_input", "maps", basename(asc_dir)))
+}
+
+if (identical(environment(), globalenv())) {
+  args <- commandArgs(trailingOnly = TRUE)
+  if (length(args) < 3) {
+    message("Usage: Rscript scripts/r/Create_breeding_maps.R <rabbit_folder> <density_threshold> <n_months> [asc_dir]")
+  } else {
+    rabbit_folder <- args[1]
+    density_threshold <- as.numeric(args[2])
+    n_months <- as.integer(args[3])
+    asc_dir <- if (length(args) >= 4) args[4] else paste0("data/GIS_maps/breeding_maps_", format(Sys.time(), "%Y%m%d_%H%M%S"))
+    Create_breeding_maps(rabbit_folder, density_threshold, n_months, asc_dir)
+  }
 }
 
 

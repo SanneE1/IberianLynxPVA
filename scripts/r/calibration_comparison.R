@@ -4,7 +4,7 @@ library(tidyterra)
 library(sf)
 library(rnaturalearth)
 
-source("R/Rasterize_output_maps.R")
+source(file.path("scripts", "r", "Rasterize_output_maps.R"))
 
 
 filesO <- list.files("results/calibration/", 

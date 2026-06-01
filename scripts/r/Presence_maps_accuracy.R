@@ -6,7 +6,7 @@ library(terra)
 # hab_rast <- rast("data/GIS_maps/Lynx_HabitatMap_LUCAS_2015.asc")
 
 mean_MCC <- function(obs_dir, sim_data, hab_rast) {
-  source("R/Rasterize_output_maps.R")
+  source(file.path("scripts", "r", "Rasterize_output_maps.R"))
   
   obs_files <- list.files(obs_dir,pattern = ".shp", full.names = T)
   obs_data <- lapply(obs_files, vect)

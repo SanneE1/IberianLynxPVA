@@ -4,7 +4,7 @@ library(tidyterra)
 library(sf)
 library(rnaturalearth)
 
-source("R/Rasterize_output_maps.R")
+source(file.path("scripts", "r", "Rasterize_output_maps.R"))
 
 sim_size_format <- function(folder) { 
   lapply(list.files(file.path("results", "simulations", folder, "all_lynx_biopop/"), full.names = T), 
@@ -127,6 +127,34 @@ ggsave("results/total_size_graph_Future_rate_CORINE.png", future_sizes_plot,
 
 
 
+# Plot Rabbit density averages
+
+R25 <- csvToRaster("results/rabbit_simulation_summary_maps/Rabbit_Population_distribution_2025_5_presence_prob.csv",
+                 habitat_raster = hab_rast)
+R21 <- csvToRaster("results/rabbit_simulation_summary_maps/Rabbit_Population_distribution_2100_5_presence_prob.csv",
+                   habitat_raster = hab_rast)
+
+hist_plot <- (ggplot() +
+                geom_sf(data = world_cropped, fill = "grey90", color = "grey30", linewidth = 0.3) +
+                geom_spatraster(data = mean_hist) +
+                scale_fill_gradientn(colours = c("transparent", "lightgreen", "darkgreen"),
+                                     values = c(0, 1/25, 1),
+                                     limits = c(0, 25),
+                                     na.value = NA) +
+                theme_minimal() +
+                labs(title = "Average population size") +
+                theme(legend.position = "right")) + 
+  (ggplot() +
+     geom_sf(data = world_cropped, fill = "grey90", color = "grey30", linewidth = 0.3) +
+     geom_spatraster(data = std_hist) +
+     scale_fill_gradientn(colours = c("transparent", "lightgreen", "darkgreen"),
+                          values = c(0, 1/25, 1),
+                          limits = c(0, 25),
+                          na.value = NA) +
+     theme_minimal() +
+     labs(title = "Standard deviation") +
+     theme(legend.position = "right")) +
+  plot_layout(guides = "collect")
 
 
 
@@ -138,7 +166,7 @@ library(tidyterra)
 library(sf)
 library(rnaturalearth)
 
-source("R/Rasterize_output_maps.R")
+source(file.path("scripts", "r", "Rasterize_output_maps.R"))
 
 hab_rast = rast(file.path("data", "GIS_maps", "Lynx_HabitatMap_LUCAS_2015.asc"))
 world <- ne_countries(scale = "medium", returnclass = "sf")

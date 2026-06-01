@@ -1,10 +1,10 @@
 library(dplyr)
 
-source(file.path("R", "Create_breeding_maps.R"))
-source(file.path("R", "Presence_maps_accuracy.R"))
-source(file.path("R", "pop_sizes_accuracy.R"))
+source(file.path("scripts", "r", "Create_breeding_maps.R"))
+source(file.path("scripts", "r", "Presence_maps_accuracy.R"))
+source(file.path("scripts", "r", "pop_sizes_accuracy.R"))
 
-# r_folder = "data/Rabbit_results/"
+# r_folder = "data/Rabbit_output/"
 # settings_file = "data/model_input/past_calibration_settings.txt"
 # model_location = "Program/Executables/Run_model_debug.exe"
 # model_output = "cal_test"
