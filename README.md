@@ -11,13 +11,12 @@ This repository contains code for the Individual Based Iberian lynx population v
   - `Rabbit_output/` - rabbit model CSV output folder for HPC simulation runs.
 
 - `scripts/r/` - R scripts and helpers.
-  - `scripts/r/analysis/` - analysis and calibration driver scripts.
-
+  
 - `scripts/python/` - Python helper scripts and summary tools.
 
 - `scripts/shell/` - HPC submission wrappers and sbatch job helper files.
 
-- `Program/` - Pascal model sources and executables. This folder is intentionally left unchanged.
+- `Program/` - Pascal model sources and executables. 
 
 ## Workflow overview
 This repository supports a full Lynx PVA workflow from data preparation through forecast simulation and post-processing.
@@ -63,6 +62,13 @@ Inspect calibration results and choose the best-performing values for:
 - rabbit density threshold
 - minimum months at threshold
 - lynx territory size
+
+- Shell command:
+   - `scripts/shell/calibration_comparison_submission.sh`
+- Underlying script:
+   - `scripts/r/calibration_comparison.R`
+- Outputs:
+   
 
 ### 5. Forecast simulations
 Run forward model simulations with the selected parameter sets.
