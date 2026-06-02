@@ -29,4 +29,4 @@ module load GEOS/3.12.2
 module load R/4.4.2
 
 
-Rscript analysis/Territory_and_BH_calibration.R "$RABDIR" "$SETTINGS" "$MODEL_EXE" "$MODEL_OUT" "$OBS_DIR" "$TASK_ID"
+Rscript analysis/Territory_and_BH_calibration.R "$RABDIR" "$SETTINGS" "$MODEL_EXE" "$OBS_DIR" "$TASK_ID"

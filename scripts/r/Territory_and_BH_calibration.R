@@ -17,11 +17,10 @@ args = commandArgs(trailingOnly = T)
 r_folder = args[1]
 settings_file = args[2]
 model_location = args[3]
-model_output = args[4]
-obs_dir = args[5]
-r = as.integer(args[6])
+obs_dir = args[4]
+r = as.integer(args[5])
 
-model_output = paste(model_output, r, sep = "_")
+model_output = paste(file_path_sans_ext(basename(r_folder)), r, sep = "_")
 
 if(!dir.exists(model_output)){
   dir.create(model_output, recursive = T)
@@ -32,7 +31,7 @@ if(!dir.exists(model_output)){
 #----------------------------------------
 
 Tsize <- c(6,8,10,12)
-threshold <- seq(from = 1, to = 11, by = 3)
+threshold <- seq(from = 3, to = 12, by = 3)
 n_months <- c(6,9,12)
 
 cal_df <- expand.grid("threshold" = threshold, "n_months" = n_months)
@@ -87,7 +86,7 @@ for(s in Tsize) {
     result_df <- rbind(result_df, result)
     }
     
-    unlink(model_output)
+    unlink(model_output, recursive = T)
 
   }
 }
