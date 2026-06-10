@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=8G
-#SBATCH --time=1:00:00
+#SBATCH --time=0:10:00
 #SBATCH --output=job_reports/calibration_comparison_output_%j.log
 #SBATCH --error=job_reports/calibration_comparison_error_%j.log
 

@@ -136,9 +136,9 @@ mean_MCC <- function(obs_dir, sim_data, hab_rast) {
     mcc10 <- c(mcc10, phi)
   }
   
-  return(data.frame(mcc_500m = mcc,
-                    mcc_5km = mcc5,
-                    mcc_10km = mcc10)
+  return(data.frame(mcc_500m = mean(mcc, na.rm = T),
+                    mcc_5km = mean(mcc5, na.rm = T),
+                    mcc_10km = mean(mcc10, na.rm = T))
          )
 } 
 

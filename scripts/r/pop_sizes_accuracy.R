@@ -16,9 +16,8 @@ compare_pop_sizes <- function(size_file, sim_data) {
   df <- left_join(a,b)  %>%
     filter(Year < 2023)
   
-  log_rmse = sqrt(mean((log(df$N_sim) - log(df$N_obs))^2))
+  rmsle = sqrt(mean((log(df$N_obs + 1) - log(df$N_sim + 1))^2, na.rm = T))
   
-  return(log_rmse)
-  
+  return(rmsle)
   
 }
