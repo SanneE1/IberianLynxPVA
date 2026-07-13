@@ -112,6 +112,7 @@ predict_dispersal <- function(
   r_pred  <- terra::mask(r_pred, iberia)
   r_mahal <- terra::mask(r_mahal, iberia)
   
+  if(!dir.exists(dirname(output_path))){dir.create(dirname(output_path), recursive = T)}
   
   terra::writeRaster(r_pred,   output_path, overwrite = TRUE)
   terra::writeRaster(r_mahal,  sub("\\.tif", "_extrapolation_risk.tif", output_path), overwrite = TRUE)
