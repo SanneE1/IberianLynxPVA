@@ -1,5 +1,5 @@
 # =============================================================================
-# Dispersal Resistance Model: PCA on Vegetation + GAM with s(x,y)
+# Habitat Suitability Model: PCA on Vegetation + GAM with s(x,y)
 # =============================================================================
 
 # =============================================================================
@@ -24,7 +24,7 @@ source("scripts/r/transform_maps_to_model_input.R")
 
 # --- File paths ---------------------------------------------------------------
 template        <- "data/GIS_maps/Peninsula_500_template.tif"
-habitat_path    <- "data/original_data/Lynx_movement_resistance_maps_Pablo_Cisneros/capas/res_lince_w_2025.tif"
+habitat_path    <- "data/original_data/Lynx_movement_resistance_maps_Pablo_Cisneros/capas/habitat_lince_PI_2025.tif"
 elevation_path  <- "data/original_data/Copernicus_GLO90_Europe_250m.tif"
 vegetation_path <- "data/original_data/LUC_historic_landcover/LUCAS_LUC_v1.1_historical_Europe_0.1deg_2010_2015.nc"
 
@@ -46,7 +46,7 @@ lucas_categores <- c("Tropical.broadleaf.evergreen.trees",
                      "Bare")
 
 # --- PCA settings -------------------------------------------------------------
-PCA_VAR_THRESHOLD <- 0.90
+PCA_VAR_THRESHOLD <- 0.95
 PCA_MAX_PCS <- 10
 
 # --- GAM settings -------------------------------------------------------------
@@ -63,7 +63,7 @@ UNIVAR_K <- 10
 SAMPLE_FRACTION <- 0.10
 
 # --- Output directory ---------------------------------------------------------
-OUT_DIR <- "results/PCA_dispersal"   # change to e.g. "outputs" if desired
+OUT_DIR <- "results/PCA_habitat"   # change to e.g. "outputs" if desired
 dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
 
 
@@ -100,7 +100,7 @@ r_habitat <- terra::resample(r_habitat, r_template, method = "bilinear")
 r_elev <- terra::resample(r_elev, r_template, method = "bilinear")
 r_veg  <- terra::resample(r_veg,  r_template, method = "bilinear")
 
-names(r_habitat)  <- "dispersal.resistance"
+names(r_habitat)  <- "habitat.suitability"
 names(r_elev) <- "elevation"
 
 # =============================================================================
@@ -210,7 +210,7 @@ df_train  <- df_full[idx_train, ]
 
 # -----------------------------------------------------------------------------
 # Model:
-#   disp.res ~ s(elevation)             — nonlinear elevation response
+#   habitat.suitability ~ s(elevation)  — nonlinear elevation response
 #              + s(PC1) + s(PC2) + ...  — nonlinear vegetation PC responses
 #              + s(x, y, k=SPATIAL_K)   — 2D spatial smooth (absorbs autocorr.)
 #
@@ -225,7 +225,7 @@ pc_smooth_terms <- paste(
 )
 
 gam_formula <- as.formula(sprintf(
-  "log(dispersal.resistance) ~ s(elevation, k = %d, bs = 'cr') + %s + s(x, y, k = %d, bs = 'tp')",
+  "habitat.suitability ~ s(elevation, k = %d, bs = 'cr') + %s + s(x, y, k = %d, bs = 'tp')",
   UNIVAR_K, pc_smooth_terms, SPATIAL_K
 ))
 
@@ -296,9 +296,9 @@ lucas_hist  <- terra::crop(lucas_hist,  r_template)
 hist_r <- subset(lucas_hist, time(lucas_hist) == as.Date("2015-01-01"))
 names(hist_r) <- lucas_categores
 
-hist <- predict_PCA_maps(veg_rast = hist_r, elev_rast = dem, template_raster = r_template,
-                         name_prediction_type = "predicted_habitat_suitability",
-                         pca_path = pca, gam_path = gam, output_path = file.path(OUT_DIR, "dispersal_historic.tif")) 
+hist <- predict_PCA_maps(veg_rast = hist_r, elev_rast = dem, template_raster = r_template, 
+                         pca_path = pca, gam_path = gam, name_prediction_type = "habitat.suitability",
+                         output_path = file.path(OUT_DIR, "habitat_historic_predicted.tif")) 
 
 
 lucas_fut_245  <- terra::crop(lucas_fut_245, ext(-11, 3.4, 34, 45))
@@ -309,9 +309,9 @@ for(d in unique(time(lucas_fut_245))) {
   print(as.Date(d))
   fut_r <- subset(lucas_fut_245, time(lucas_fut_245) == as.Date(d))
   names(fut_r) <- lucas_categores
-  output_file <- file.path(OUT_DIR, "ssp245", paste0("Lynx_dispersal_", year(as.Date(d)), ".tif"))
+  output_file <- file.path(OUT_DIR, "ssp245", paste0("Lynx_habitat_", year(as.Date(d)), ".tif"))
   predict_PCA_maps(veg_rast = fut_r, elev_rast = dem, template_raster = r_template,
-                   name_prediction_type = "predicted_habitat_suitability",
+                   name_prediction_type = "habitat.suitability",
                    pca_path = pca, gam_path = gam, output_path = output_file)
   
 }
@@ -320,38 +320,52 @@ lucas_fut_585  <- terra::crop(lucas_fut_585, ext(-11, 3.4, 34, 45))
 lucas_fut_585  <- terra::project(lucas_fut_585,  terra::crs(r_template), method = "bilinear")
 lucas_fut_585  <- terra::crop(lucas_fut_585,  r_template)
 
-for(d in unique(time(lucas_fut_585))[c(42:85)]) {
+for(d in unique(time(lucas_fut_585))) {
   print(as.Date(d))
   fut_r <- subset(lucas_fut_585, time(lucas_fut_585) == as.Date(d))
   names(fut_r) <- lucas_categores
   output_file <- file.path(OUT_DIR, "ssp585", paste0("Lynx_dispersal_", year(as.Date(d)), ".tif"))
   predict_PCA_maps(veg_rast = fut_r, elev_rast = dem, template_raster = r_template,
-                   name_prediction_type = "predicted_habitat_suitability",
+                   name_prediction_type = "habitat.suitability",
                    pca_path = pca, gam_path = gam, output_path = output_file)
   
 }
 
 
-# ggplot() +
-#   geom_sf(data = world_cropped, fill = "grey90", color = "grey30", linewidth = 0.3) +
-#   geom_spatraster(data = hist$predicted) +
-#   scale_fill_viridis_b(limits = c(0, 0.9),
-#                        # oob = scales::oob_squish,
-#                        na.value = NA) +
-#   theme_minimal()
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+world_cropped <- world %>%
+  st_transform(crs(template_raster)) %>%
+  st_crop(ext(template_raster))
+
+ggplot() +
+  geom_sf(data = world_cropped, fill = "grey90", color = "grey30", linewidth = 0.3) +
+  geom_spatraster(data = hist$predicted) +
+  geom_spatvector(data = pops, color = "red", fill = "red", alpha = 0.1) +
+  scale_fill_viridis_c(limits = c(34,35),
+                       oob = scales::squish,
+                       na.value = NA) +
+  theme_minimal()
 
 # =============================================================================
 # 6.  Create Category Maps
 # =============================================================================
 
+pops <- vect("data/original_data/20250825_data_German/Presencias/2022_peninsula_iberica/2022_peninsula.shp")
+
+hab <- rast("data/original_data/Lynx_movement_resistance_maps_Pablo_Cisneros/capas/habitat_lince_PI_2025.tif")
+hab_val <- terra::extract(hab, pops)
+
+
 COR <- rast("data/GIS_maps/Lynx_HabitatMap_500_Peninsula_Revilla_2015_1.asc")
 df <- data.frame(
-  disp_res = values(r_habitat),
-  disp_pred = values(hist$predicted),
+  hab_suit = values(r_habitat),
+  hab_pred = values(hist$predicted),
   corine = as.factor(values(COR))
 ) %>% 
-  rename(disp_res = dispersal.resistance,
-         disp_pred = predicted_dispersal) 
+  rename(hab_suit = habitat.suitability,
+         hab_pred = predicted_dispersal) %>%
+  dplyr::filter(complete.cases(.))
 
 # pres <- MASS::polr(corine ~ disp_res, data = df%>%
 #                      na.omit(), Hess=T)

@@ -1,14 +1,15 @@
-# Predict dispersal from PCA axis based on LUCAS vegetation categories and elevation using a GAM
+# Predict habitat suitability from PCA axis based on LUCAS vegetation categories and elevation using a GAM
 
-predict_dispersal <- function(
+predict_habitat_suitability <- function(
     veg_rast,
     elev_rast,
     template_raster,
-    pca_path     = "veg_pca.rds",
-    gam_path     = "gam_model.rds",
-    output_path  = "predicted_habitat.tif",
-    pca_var_threshold = PCA_VAR_THRESHOLD,
-    pca_max_pcs       = PCA_MAX_PCS
+    pca_path             = "veg_pca.rds",
+    gam_path             = "gam_model.rds",
+    output_path          = "predicted_habitat.tif",
+    name_prediction_type = "predicted_habitat_suitability",
+    pca_var_threshold    = PCA_VAR_THRESHOLD,
+    pca_max_pcs          = PCA_MAX_PCS
 ) {
   
   cat("\n=== Prediction ===\n")
@@ -102,7 +103,7 @@ predict_dispersal <- function(
   
   r_pred <- terra::predict(pred_stack, gam_obj,
                            fun = predict_gam_fun, na.rm = TRUE)
-  names(r_pred) <- "predicted_dispersal"
+  names(r_pred) <- name_prediction_type
   
   # Only keep the mainland iberia area's (spain/portugal)
   iberia <- rbind(gadm("ESP", level = 0, path = tempdir()),
@@ -112,7 +113,6 @@ predict_dispersal <- function(
   r_pred  <- terra::mask(r_pred, iberia)
   r_mahal <- terra::mask(r_mahal, iberia)
   
-  if(!dir.exists(dirname(output_path))){dir.create(dirname(output_path), recursive = T)}
   
   terra::writeRaster(r_pred,   output_path, overwrite = TRUE)
   terra::writeRaster(r_mahal,  sub("\\.tif", "_extrapolation_risk.tif", output_path), overwrite = TRUE)
