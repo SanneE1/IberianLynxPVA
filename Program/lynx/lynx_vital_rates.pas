@@ -323,7 +323,7 @@ begin
 
 
           {If in breeding habitat, check if settlement is possible}
-          if (HabitatMapLynx[TestCoordX, TestCoordY] = 2) and (BreedingHabitatMap[TestCoordX, TestCoordY] = 1) then
+          if ReproductionQuality(TestCoordX, TestCoordY) then
           begin
 
             test_cell_available := False;
@@ -343,7 +343,7 @@ begin
                     xi := TestCoordX + dx[i];
                     yi := TestCoordY + dy[i];
                     if CanMoveHere(xi, yi) then
-                    if ((HabitatMapLynx[xi, yi] = 2) and (BreedingHabitatMap[xi, yi] = 1)) then
+                    if ReproductionQuality(xi, yi) then
                     begin
                       c_available:= False;
                       c_available:= TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age);
@@ -387,7 +387,7 @@ begin
 
                    if not already_terr then
                     if CanMoveHere(xi, yi) then
-                    if ((HabitatMapLynx[xi, yi] = 2) and (BreedingHabitatMap[xi, yi] = 1)) then
+                    if ReproductionQuality(xi, yi) then
                     begin
                     c_available := False;
                     c_available:= TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age);

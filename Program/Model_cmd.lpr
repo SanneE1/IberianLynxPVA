@@ -89,7 +89,7 @@ MapDimY := 0;
 if not (habitat_folder = '0') then
   begin
   WriteLn(habitat_folder + PathDelim + 'Lynx_HabitatMap_' + IntToStr(start_year) + '.txt');
-  BreedingHabitatMap := ReadMap(ExpandFileName(habitat_folder + PathDelim + 'Lynx_HabitatMap_' + IntToStr(start_year) + '.txt'))
+  HabitatMapLynx := ReadMap(ExpandFileName(habitat_folder + PathDelim + 'Lynx_HabitatMap_' + IntToStr(start_year) + '.txt'))
   end
   else
   begin
