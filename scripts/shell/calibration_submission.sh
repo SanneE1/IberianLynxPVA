@@ -12,11 +12,13 @@
 
 RABDIR=$1
 SETTINGS=$2
-MODEL_EXE="Program/Executables/Run_model_debug"
 MODEL_OUT=$3
+MODEL_EXE="Program/Executables/Run_model_debug"
 OBS_DIR="data/GIS_maps/presence_vectors/"
 
 TASK_ID=${SLURM_ARRAY_TASK_ID}
+
+MODEL_OUTPUT="${MODEL_OUT}_${TASK_ID}"
 
 # Load modules
 module load rama0.4  
@@ -29,4 +31,6 @@ module load GEOS/3.12.2
 module load R/4.4.2
 
 
-Rscript analysis/Territory_and_BH_calibration.R "$RABDIR" "$SETTINGS" "$MODEL_EXE" "$OBS_DIR" "$TASK_ID"
+Rscript scripts/r/Territory_and_BH_calibration.R "$RABDIR" "$SETTINGS" "$MODEL_OUTPUT" "$MODEL_EXE" "$OBS_DIR" "$TASK_ID"
+
+rm -rf "$MODEL_OUTPUT"
