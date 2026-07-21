@@ -15,16 +15,20 @@ except ImportError:
 
 def calculate_matrix_statistics(folder_paths, output_folder, confidence_level=0.95):
     """
-    Calculate mean and 95% CI for each cell across multiple CSV matrices.
-    
+    Calculate occupancy probability (value > 0) for each cell across multiple
+    txt matrices. For files with "traveled" in the filename, instead compute
+    the mean and 95% CI (lower/upper) maps.
+
     Parameters:
     -----------
     folder_paths : list of str
-        List of folder paths containing the CSV matrices
+        List of folder paths containing the txt matrices
     output_folder : str
         Path where summary files will be saved
     confidence_level : float
-        Confidence level for the interval (default: 0.95)
+        Confidence level for the interval (default: 0.95), only used for
+        "traveled" files
+    
     """
     
     # Create output folder if it doesn't exist
@@ -66,46 +70,49 @@ def calculate_matrix_statistics(folder_paths, output_folder, confidence_level=0.
         matrices_array = np.stack(matrices, axis=0)
         n_samples = matrices_array.shape[0]
         
-        print(f"  Computing statistics across {n_samples} matrices...")
-        
-        # Calculate mean across folders (axis=0)
-        mean_matrix = np.mean(matrices_array, axis=0)
-        
-        # Calculate standard error
-        std_matrix = np.std(matrices_array, axis=0, ddof=1)
-        se_matrix = std_matrix / np.sqrt(n_samples)
-        
-        # Calculate 95% CI using t-distribution
-        # For large n, this approaches the normal distribution
-        t_value = stats.t.ppf((1 + confidence_level) / 2, n_samples - 1)
-        margin_error = t_value * se_matrix
-        
-        lower_ci = mean_matrix - margin_error
-        upper_ci = mean_matrix + margin_error
-        
-        # Save results
         base_name = filename.replace('.csv', '')
+
+        if "traveled" in filename:
+            print(f"  Computing mean and {confidence_level*100:.0f}% CI across {n_samples} matrices...")
+
+            mean_matrix = np.mean(matrices_array, axis=0)
+            std_matrix = np.std(matrices_array, axis=0, ddof=1)
+            se_matrix = std_matrix / np.sqrt(n_samples)
+
+            t_value = stats.t.ppf((1 + confidence_level) / 2, n_samples - 1)
+            margin_error = t_value * se_matrix
+
+            lower_ci = mean_matrix - margin_error
+            upper_ci = mean_matrix + margin_error
+
+            pd.DataFrame(mean_matrix).to_csv(
+                output_path / f"{base_name}_mean.csv",
+                index=False,
+                header=False
+            )
+            pd.DataFrame(lower_ci).to_csv(
+                output_path / f"{base_name}_lower_ci.csv",
+                index=False,
+                header=False
+            )
+            pd.DataFrame(upper_ci).to_csv(
+                output_path / f"{base_name}_upper_ci.csv",
+                index=False,
+                header=False
+            )
+
+        else:
+            print(f"  Computing occupancy probability across {n_samples} matrices...")
+
+            occupied = matrices_array > 0
+            occupancy_prob = np.mean(occupied, axis=0)
+
+            pd.DataFrame(occupancy_prob).to_csv(
+                output_path / f"{base_name}_occupancy_prob.csv",
+                index=False,
+                header=False
+            )
         
-        pd.DataFrame(mean_matrix).to_csv(
-            output_path / f"{base_name}_mean.csv", 
-            index=False, 
-            header=False
-        )
-        pd.DataFrame(std_matrix).to_csv(
-            output_path / f"{base_name}_std.csv",
-            index=False,
-            header=False
-        )
-        pd.DataFrame(lower_ci).to_csv(
-            output_path / f"{base_name}_lower_ci.csv", 
-            index=False, 
-            header=False
-        )
-        pd.DataFrame(upper_ci).to_csv(
-            output_path / f"{base_name}_upper_ci.csv", 
-            index=False, 
-            header=False
-        )
         
 
 
