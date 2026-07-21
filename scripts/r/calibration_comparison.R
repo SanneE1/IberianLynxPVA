@@ -51,6 +51,25 @@ write.csv(sample_df,
           file.path("results", "simulation_parameters_RCorrected_sampled.csv"), 
           row.names = F)
 
+sample_df2 <- df1 %>% filter(type == "RIPM") %>% 
+              sample_n(nrow(.), 
+                       size = 500,
+                       weight = weight, replace = T)
+
+write.csv(sample_df2, 
+          file.path("results", "simulation_parameters_RIPM_sampled.csv"), 
+          row.names = F)
+
+sample_df3 <- df1 %>% filter(type == "ROriginal") %>% 
+              sample_n(nrow(.), 
+                       size = 500,
+                       weight = weight, replace = T)
+
+write.csv(sample_df3, 
+          file.path("results", "simulation_parameters_ROriginal_sampled.csv"), 
+          row.names = F)
+
+
 cat('------------------------------------------------\n')
 cat('Top 10 overall with best MCC at 5km and RMSE population estimate:\n')
 cat('------------------------------------------------\n\n\n')
