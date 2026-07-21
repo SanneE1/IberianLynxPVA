@@ -103,7 +103,7 @@ if not (breeding_folder = '0') then
   end
   else
   begin
-  BreedingHabitatMap := ReadMap(breeding_file);
+  BreedingHabitatMap := ReadMap(ExpandFileName(breeding_file));
   end;
 
 PopsMap := ReadMap(mapPops);

@@ -21,6 +21,7 @@ library(terra)       # raster I/O, resampling, algebra
 library(dplyr)       # data wrangling
 library(tidyr)       # pivoting
 library(ggplot2)     # plotting
+library(tidyterra)   # plotting for terra
 library(ggcorrplot)  # correlation matrix plot
 library(spdep)       # spatial autocorrelation (Moran's I)
 library(car)         # VIF
@@ -31,6 +32,7 @@ library(patchwork)   # plot composition
 # =============================================================================
 
 # --- Paths ---
+template         <- "data/GIS_maps/Peninsula_500_template.tif"
 resistance_path  <- "data/original_data/Lynx_movement_resistance_maps_Pablo_Cisneros/capas/res_lince_w_2025.tif"          # fine-resolution resistance
 output_dir       <- "data/GIS_maps/resistance_LUCAS_scaling/"
 dir.create(output_dir, showWarnings = FALSE)
@@ -44,7 +46,7 @@ file_start_years <- seq(2016, 2100, by = 10)   # one per nc file, in order
 lc_years <- 2016:2100
 
 # --- Baseline year (should overlap or be closest to resistance raster year) ---
-baseline_year <- 2025
+baseline_year <- 2016
 
 # --- Projection method: "multiplicative" or "additive" ---
 # multiplicative: projected = baseline_resistance × (pred_t / pred_baseline)
@@ -65,6 +67,7 @@ reference_type   <- "lc3"
 cat("\n--- Loading NetCDF rasters ---\n")
 
 resistance <- rast(resistance_path)
+resistance <- app(resistance > 100, 100, resistance)
 
 # Build lc_stack[[type_number]] = SpatRaster with layers named by absolute year
 lc_stack <- vector("list", length(n_cover_types))
@@ -140,11 +143,17 @@ print(ext(resistance))
 # =============================================================================
 
 cat("\n--- Aggregating resistance to coarse grid ---\n")
+r_template <- rast(template)
 
 # Reproject resistance to LC CRS if they differ
-if (!same.crs(resistance, lc_stack[[1]])) {
+if (!same.crs(r_template, resistance)) {
   cat("  Reprojecting resistance to LC CRS...\n")
-  resistance <- project(resistance, crs(lc_stack[[1]]), method = "bilinear")
+  resistance <- project(resistance, crs(r_template), method = "bilinear")
+}
+
+if (!same.crs(r_template, lc_stack[[1]])) {
+  cat("  Reprojecting resistance to LC CRS...\n")
+  resistance <- project(lc_stack, crs(r_template), method = "bilinear")
 }
 
 # Create a template at the coarse LC resolution/extent
@@ -449,3 +458,57 @@ ggsave(file.path(output_dir, "diagnostic_plots.pdf"),
        device = "pdf")
 
 cat("  Saved: diagnostic_plots.pdf\n")
+
+
+# =============================================================================
+# 8. Change to dispersal categories
+# =============================================================================
+r_temp <- rast(template)
+
+disp_for <- rast(file.path("data", "GIS_maps", "resistance_LUCAS_scaling", "projected_stack.tiff"))
+COR <- rast("data/GIS_maps/Lynx_HabitatMap_500_Peninsula_Revilla_2015_1.asc")
+COR <- project(COR, crs(disp_for), method = "max")
+r_temp <- rast(template)
+r_temp <- project(r_temp, crs(disp_for))
+
+disp_for <- resample(disp_for, r_temp)
+
+COR <- resample(COR, r_temp)
+
+ggplot() +
+  geom_spatraster(data = disp_for$`2016`) + 
+  scale_fill_viridis_c(transform = "sqrt",
+                       limits   = c(0, 100),
+                       oob      = scales::squish)
+
+df <- data.frame(
+  disp_pred = values(disp_for$`2016`),
+  corine = as.factor(values(COR))
+) %>% 
+  rename(disp_pred = X2016) 
+
+ppred <- MASS::polr(corine ~ disp_pred, data = df%>%
+                      na.omit(), Hess=T)
+
+
+
+for (n in names(disp_for)) {
+  df_new <- data.frame(
+    disp_pred = values(disp_for[[n]]),
+    corine = as.factor(values(COR))
+  ) 
+  colnames(df_new)[1] <- "disp_pred"
+  
+  vpPred <- rep(NA, nrow(df_new))
+  vpPred[!is.na(df_new$disp_pred)] <- predict(ppred, newdata = df_new[!is.na(df_new$disp_pred), , drop = FALSE], type = "class")
+  
+  r <- disp_for[[n]]
+  values(r) <- as.integer(vpPred)
+  
+  f <- file.path("data", "GIS_maps", "Delta_dispersal", paste0("Lynx_HabitatMap_", n, ".asc"))
+  finput <- file.path("data", "model_input", "maps", "Delta_dispersal", paste0("Lynx_HabitatMap_", n, ".txt"))
+  
+  writeRaster(r, f, datatype = "INT2S", overwrite = TRUE, NAflag = -9999)
+  
+  transform_asc_file(f, finput)
+}

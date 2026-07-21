@@ -6,55 +6,64 @@ library(rnaturalearth)
 
 source(file.path("scripts", "r", "Rasterize_output_maps.R"))
 
-sim_size_format <- function(folder) { 
-  lapply(list.files(file.path("results", "simulations", folder, "all_lynx_biopop/"), full.names = T), 
-         function(x) {
-           s <- stringr::str_split(x, pattern = "/")
-           s <- stringr::str_split(s[[1]][5], pattern = "_")
-           
-           a <- read.csv(x)
-           a$sim_size <- rowSums(a[,-1])
-           a$Rsim <- as.integer(s[[1]][2])
-           a$Tsize <- as.integer(s[[1]][3])
-           a$threshold <- as.integer(s[[1]][4])
-           a$months <- as.integer(s[[1]][5])
-           a$rep  <- as.integer(s[[1]][6])
-           return(a)
-         }) %>%
-    bind_rows() %>%
-    filter(year != 2023)
-}
+# sim_size_format <- function(folder) { 
+#   lapply(list.files(file.path("results", "simulations", folder, "all_lynx_biopop/"), full.names = T), 
+#          function(x) {
+#            s <- stringr::str_split(x, pattern = "/")
+#            s <- stringr::str_split(s[[1]][5], pattern = "_")
+#            
+#            a <- read.csv(x)
+#            a$sim_size <- rowSums(a[,-1])
+#            a$Rsim <- as.integer(s[[1]][2])
+#            a$Tsize <- as.integer(s[[1]][3])
+#            a$threshold <- as.integer(s[[1]][4])
+#            a$months <- as.integer(s[[1]][5])
+#            a$rep  <- as.integer(s[[1]][6])
+#            return(a)
+#          }) %>%
+#     bind_rows() %>%
+#     filter(year != 2023)
+# }
 
-hab_rast = rast(file.path("data", "GIS_maps", "Lynx_HabitatMap_LUCAS_2015.asc"))
+hab_rast = rast(file.path("data", "GIS_maps", "Peninsula_500_template.tif"))
 world <- ne_countries(scale = "medium", returnclass = "sf")
 world_cropped <- world %>%
   st_transform(crs(hab_rast)) %>%
   st_crop(ext(hab_rast))
 
+# Breeding habitat ---------------------------------------------------------------------------------------------------
+
+bh22mean <- csvToRaster("results/rabbit_simulation_summary_maps/Lynx_BreedingMap_2022_mean.csv", hab_rast)
+bh22lower <- csvToRaster("results/rabbit_simulation_summary_maps/Lynx_BreedingMap_2022_lower_ci.csv", hab_rast)
+bh22upper <- csvToRaster("results/rabbit_simulation_summary_maps/Lynx_BreedingMap_2022_upper_ci.csv", hab_rast)
+
 # Historic simulations -----------------------------------------------------------------------------------------------
 
-folders <- c("Historical_simulations", "Historical_simulations_rate", 
-             "Historical_simulations_CORINE", "Historical_simulations_rate_CORINE")
+
+folders <- c(file.path("results", "simulations", "historic_06.15"))
 
 # Spatial distribution
 for(f in folders){
   obs_22 <- vect("data/GIS_maps/presence_vectors/2022.shp")
   obs_22 <- project(obs_22, crs(hab_rast))
   
-  map22_file = file.path("results", "simulations", f, "FemalesMap_status_yr_2022_presence_prob.csv")
+  map22_file = file.path(f, "summary_maps", "FemalesMap_status_yr_2022_occupancy_prob.csv")
   map22 <- csvToRaster(map22_file, hab_rast)
   map22 <- ifel(map22 == 0, NA, map22)
   
-  p <- ggplot() +
-          geom_sf(data = world_cropped, fill = "grey90", color = "grey30", linewidth = 0.3) +
-          geom_spatvector(data = obs_22, fill = "grey100", color = "grey100") +
-          geom_spatraster(data = map22) +
-          scale_fill_gradientn(colours = c("transparent", "blue", "red"),
-                               values = c(0, 0.0001, 1),
-                               limits = c(0, 1),
-                               na.value = NA)
+  # p <- 
+    ggplot() +
+    geom_sf(data = world_cropped, fill = "grey90", color = "white", linewidth = 0.3) +
+    geom_spatraster(data = map22) +
+    geom_spatvector(data = aggregate(obs_22), fill = "transparent", color = "grey30") +
+    scale_fill_gradientn(colours = c("transparent", "yellow", "red"),
+                         values = c(0, 0.0001, 1),
+                         limits = c(0, 1),
+                         na.value = NA) +
+    theme_light()
+  
   print(p)
-  ggsave(paste0("results/", f, "_distribution_2022.png"), p)
+  ggsave(paste0(f, "_distribution_2022.png"), p)
   
 }
 
@@ -75,7 +84,7 @@ p_sizes <- ggplot() +
   geom_line(data = size_simOC, aes(x = year, y = sim_size, group = interaction(Rsim, Tsize, threshold, months, rep), colour = "Original_CORINE")) +
   geom_line(data = size_simRC, aes(x = year, y = sim_size, group = interaction(Rsim, Tsize, threshold, months, rep), colour = "rate_CORINE")) +
   geom_line(data = size_obs, aes(x = Year, y = obs_size), colour = "grey40", size = 2) 
-  
+
 ggsave("results/population_sizes_calibration_comparisons.png", p_sizes, width = 5.5, height = 6.1)
 
 
@@ -130,7 +139,7 @@ ggsave("results/total_size_graph_Future_rate_CORINE.png", future_sizes_plot,
 # Plot Rabbit density averages
 
 R25 <- csvToRaster("results/rabbit_simulation_summary_maps/Rabbit_Population_distribution_2025_5_presence_prob.csv",
-                 habitat_raster = hab_rast)
+                   habitat_raster = hab_rast)
 R21 <- csvToRaster("results/rabbit_simulation_summary_maps/Rabbit_Population_distribution_2100_5_presence_prob.csv",
                    habitat_raster = hab_rast)
 

@@ -11,7 +11,6 @@ uses
 
 procedure Startpopulation_lynx;
 procedure Lynx_reintroduction(current_year: integer);
-procedure Lynx_daily_demography(month, day: integer);
 procedure Lynx_age_and_settle;
 
 implementation
@@ -221,20 +220,6 @@ begin
 
 end;
 
-procedure Lynx_daily_demography(month, day: integer);
-begin
-  LynxPopulationSize := LynxPopulation.Count;
-
-        {if (month = 4) and (day = 1) then
-          begin
-            writeLn('reproduction');
-            reproduction;               // Reproduction happens at the end of March
-          end;}
-        Dispersal(day);                 // Dispersal of surviving Lynxs (also includes dispersion start for subadults)
-        //survival;                       // Determine which individuals survive this day
-
-
- end;
 
 procedure Lynx_age_and_settle;
 var

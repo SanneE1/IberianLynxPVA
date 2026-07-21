@@ -150,7 +150,7 @@ begin
       else surv_p := L_surv_array[Lynx^.Age, 0];     // Other
 
       {Transform annual survival (surv_p) to daily survival (surv_day)}
-        surv_day := Power(surv_p, (1 / 12)); //365
+        surv_day := Power(surv_p, (1 / 365));
 
         if (Lynx^.Status = 1) then
         begin

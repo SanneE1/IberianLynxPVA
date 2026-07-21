@@ -1,14 +1,15 @@
 # Predict habitat suitability from PCA axis based on LUCAS vegetation categories and elevation using a GAM
 
-predict_habitat_suitability <- function(
+predict_PCA_maps <- function(
     veg_rast,
     elev_rast,
     template_raster,
-    pca_path     = "veg_pca.rds",
-    gam_path     = "gam_model.rds",
-    output_path  = "predicted_habitat.tif",
-    pca_var_threshold = PCA_VAR_THRESHOLD,
-    pca_max_pcs       = PCA_MAX_PCS
+    pca_path             = "veg_pca.rds",
+    gam_path             = "gam_model.rds",
+    output_path          = "predicted_habitat.tif",
+    name_prediction_type = "predicted_habitat_suitability",
+    pca_var_threshold    = PCA_VAR_THRESHOLD,
+    pca_max_pcs          = PCA_MAX_PCS
 ) {
   
   cat("\n=== Prediction ===\n")
@@ -102,7 +103,7 @@ predict_habitat_suitability <- function(
   
   r_pred <- terra::predict(pred_stack, gam_obj,
                            fun = predict_gam_fun, na.rm = TRUE)
-  names(r_pred) <- "predicted_habitat_suitability"
+  names(r_pred) <- name_prediction_type
   
   # Only keep the mainland iberia area's (spain/portugal)
   iberia <- rbind(gadm("ESP", level = 0, path = tempdir()),
