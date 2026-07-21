@@ -3,6 +3,7 @@
 .Rhistory
 .RData
 .Ruserdata
+*.csv
 
 results/
 QGIS/
