@@ -5,12 +5,29 @@ library(dplyr)
 
 # paths
 corine_raster_path <- "data/original_data/U2018_CLC2018_V2020_20u1.tif"  # Replace with the path to your CORINE raster
+output_folder = "data/GIS_maps/"
 
-# Load the CORINE raster
 corine_raster <- rast(corine_raster_path)
 
 # Define the boundaries and crop the CORINE to size
 peninsula <- crop(corine_raster, ext(2574200, 3801100, 1515200, 2497800))
+
+# Create template rasters with 500m resolution
+peninsula_template <- rast(
+  xmin = xmin(peninsula), 
+  xmax = xmax(peninsula),
+  ymin = ymin(peninsula), 
+  ymax = ymax(peninsula),
+  resolution = c(500, 500),
+  crs = crs(peninsula)
+)
+
+template <- resample(peninsula, peninsula_template)
+template <- ifel(template < 45, 1, NA)
+
+writeRaster(template, "data/GIS_maps/Peninsula_500_template.tif", 
+            datatype = "INT2S", overwrite = TRUE, NAflag = -9999)
+
 
 # --------------------------------------
 # HABITAT MAP
