@@ -488,9 +488,16 @@ ggplot() +
                        na.value = NA) +
   theme_minimal()
 
+hist_r <- ifel(hist_predicted < splits[1], 2, ifel(hist_predicted < splits[2], 1, 0))
+writeRaster(hist_r, file.path(OUT_DIR, "Lynx_DispersalMap_historic.asc"), 
+            datatype = "INT2S", overwrite = TRUE, NAflag = -9999)
+transform_asc_file(file.path(OUT_DIR, "Lynx_DispersalMap_historic.asc"), 
+                   gsub("GIS_maps", "model_input/maps",
+                        file.path(OUT_DIR, "Lynx_DispersalMap_historic.txt")))
 
 
 pred_files_585 <- rast(file.path(OUT_DIR, "SSP585_PCA_prediction_dispersal.tif"))
+
 
 if(!dir.exists(file.path(OUT_DIR, "SSP585"))) {dir.create(file.path(OUT_DIR, "SSP585"))}
 
