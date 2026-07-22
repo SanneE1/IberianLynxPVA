@@ -263,6 +263,16 @@ reint_key <- data.frame(subpop = c("ANDUJAR_CARDENA_MONT", "Campo de Montiel", "
 reintro <- left_join(reintro, reint_key)
 reintro <- left_join(reintro, coords)
 
+reintro[which(reintro$sizespop == "Guillena-Gerena"), c("x", "y")] <- data.frame(x = 2948657.108300277, y = 1538725.0227278136)
+reintro[which(reintro$sizespop == "Vale de Perditos"), c("x", "y")] <- data.frame(x = 2900528.5508448305, y = 1764487.1617097498)
+reintro[which(reintro$sizespop == "Cabañeros"), c("x", "y")] <- data.frame(x = 3074681.590008284, y = 1924957.9718479242)
+reintro[which(reintro$sizespop == "La Jara"), c("x", "y")] <- data.frame(x = 3036276.113294731, y = 1981594.252867222)
+reintro[which(reintro$sizespop == "Campos de Hellín"), c("x", "y")] <- data.frame(x = 3309543.4520794684, y = 1795963.4730151803)
+reintro[which(reintro$sizespop == "Lorca"), c("x", "y")] <- data.frame(x = 3271312.3508618386, y = 1715273.559439425)
+reintro[which(reintro$sizespop == "Sierra de San Pedro"), c("x", "y")] <- data.frame(x = 2851311.1530321133, y = 1988202.6903551097)
+
+
+
 reint_df <- data.frame(Year = reintro$Year,
                        X = colFromX(peninsula_template, x = reintro$x),
                        Y = rowFromY(peninsula_template, y = reintro$y),
