@@ -6,7 +6,7 @@ predict_PCA_maps <- function(
     template_raster,
     pca_path             = "veg_pca.rds",
     gam_path             = "gam_model.rds",
-    output_path          = "predicted_habitat.tif",
+    output_path          = NULL,
     name_prediction_type = "predicted_habitat_suitability",
     pca_var_threshold    = PCA_VAR_THRESHOLD,
     pca_max_pcs          = PCA_MAX_PCS
@@ -113,16 +113,16 @@ predict_PCA_maps <- function(
   r_pred  <- terra::mask(r_pred, iberia)
   r_mahal <- terra::mask(r_mahal, iberia)
   
-  
-  terra::writeRaster(r_pred,   output_path, overwrite = TRUE)
-  terra::writeRaster(r_mahal,  sub("\\.tif", "_extrapolation_risk.tif", output_path), overwrite = TRUE)
-  
-  cat(sprintf("  Saved future prediction → %s\n", output_path))
-  cat(sprintf("  Saved extrapolation risk → %s\n",
-              sub("\\.tif", "_extrapolation_risk.tif", output_path)))
+  if(!is.null(output_path)){
+    terra::writeRaster(r_pred,   output_path, overwrite = TRUE)
+    terra::writeRaster(r_mahal,  sub("\\.tif", "_extrapolation_risk.tif", output_path), overwrite = TRUE)
+    
+    cat(sprintf("  Saved future prediction → %s\n", output_path))
+    cat(sprintf("  Saved extrapolation risk → %s\n",
+                sub("\\.tif", "_extrapolation_risk.tif", output_path)))
+  }
   
   return(list(predicted = r_pred,
               extrapolation_risk = r_mahal))
-  # return(plot(r_pred))
 }
 
