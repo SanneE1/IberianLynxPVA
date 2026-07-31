@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=LynxWeightedSim
-#SBATCH -p long
+#SBATCH -p generic
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=24G

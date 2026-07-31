@@ -38,8 +38,8 @@ if(!dir.exists(model_output)){
 # Set calibration parameter combinations
 #----------------------------------------
 
-Tsize <- c(6,8,10,12,14,16,18,20)
-threshold <- seq(from = 3, to = 12, by = 3)
+Tsize <- seq(from = 10, to = 50, by = 5)
+threshold <- seq(from = 1, to = 13, by = 3)
 n_months <- c(6,9,12)
 
 cal_df <- expand.grid("threshold" = threshold, "n_months" = n_months)
