@@ -9,8 +9,6 @@
       <Unit>
         <Filename Value="Model_cmd.lpr"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
-        <TopLine Value="93"/>
         <CursorPos X="58" Y="53"/>
         <UsageCount Value="294"/>
         <Loaded Value="True"/>
@@ -60,7 +58,7 @@
       <Unit>
         <Filename Value="lynx\lynx_vital_rates.pas"/>
         <EditorIndex Value="3"/>
-        <TopLine Value="246"/>
+        <TopLine Value="368"/>
         <CursorPos X="43" Y="346"/>
         <UsageCount Value="171"/>
         <Loaded Value="True"/>
@@ -99,10 +97,11 @@
       </Unit>
       <Unit>
         <Filename Value="lynx\lynx_dispersal_assist_functions.pas"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="7"/>
-        <TopLine Value="18"/>
-        <CursorPos X="20" Y="73"/>
-        <FoldState Value=" T3T0G2 PIU0~"/>
+        <TopLine Value="30"/>
+        <CursorPos X="58" Y="81"/>
+        <FoldState Value=" T3T0G3 PLf0S"/>
         <UsageCount Value="153"/>
         <Loaded Value="True"/>
       </Unit>

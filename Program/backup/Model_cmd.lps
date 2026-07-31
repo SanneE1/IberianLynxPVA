@@ -4,13 +4,12 @@
     <PathDelim Value="\"/>
     <Version Value="12"/>
     <ManyBuildModesSelection Value="Debug,Release,Debug_linux,Release_linux"/>
-    <BuildModes Active="Debug"/>
+    <BuildModes Active="Release_linux"/>
     <Units>
       <Unit>
         <Filename Value="Model_cmd.lpr"/>
         <IsPartOfProject Value="True"/>
-        <TopLine Value="81"/>
-        <CursorPos X="17" Y="92"/>
+        <CursorPos X="58" Y="53"/>
         <UsageCount Value="294"/>
         <Loaded Value="True"/>
       </Unit>
@@ -36,8 +35,7 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="Population_dynamics"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="43"/>
-        <CursorPos X="62" Y="68"/>
+        <CursorPos X="10" Y="52"/>
         <UsageCount Value="221"/>
         <Loaded Value="True"/>
       </Unit>
@@ -60,7 +58,7 @@
       <Unit>
         <Filename Value="lynx\lynx_vital_rates.pas"/>
         <EditorIndex Value="3"/>
-        <TopLine Value="246"/>
+        <TopLine Value="368"/>
         <CursorPos X="43" Y="346"/>
         <UsageCount Value="171"/>
         <Loaded Value="True"/>
@@ -88,31 +86,27 @@
         <TopLine Value="115"/>
         <CursorPos X="75" Y="115"/>
         <FoldState Value=" T3J0(u"/>
-        <UsageCount Value="49"/>
+        <UsageCount Value="48"/>
       </Unit>
       <Unit>
         <Filename Value="rabbit\rabbit_population_dynamics.pas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="85"/>
         <CursorPos Y="125"/>
-        <UsageCount Value="48"/>
+        <UsageCount Value="47"/>
       </Unit>
       <Unit>
         <Filename Value="lynx\lynx_dispersal_assist_functions.pas"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="7"/>
-        <TopLine Value="91"/>
-        <CursorPos Y="107"/>
-        <FoldState Value=" T3T0G2 PIU0~"/>
+        <TopLine Value="30"/>
+        <CursorPos X="58" Y="81"/>
+        <FoldState Value=" T3T0G3 PLf0S"/>
         <UsageCount Value="153"/>
         <Loaded Value="True"/>
       </Unit>
     </Units>
-    <JumpHistory HistoryIndex="29">
-      <Position>
-        <Filename Value="lynx\lynx_dispersal_assist_functions.pas"/>
-        <Caret Line="167" Column="63" TopLine="155"/>
-      </Position>
+    <JumpHistory HistoryIndex="28">
       <Position>
         <Filename Value="lynx\lynx_dispersal_assist_functions.pas"/>
         <Caret Line="168" Column="15" TopLine="155"/>
