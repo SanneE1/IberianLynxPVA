@@ -20,23 +20,29 @@ df <- lapply(files, function(x) {
 
 df1 <- df %>%
   mutate(RMSEpop_norm = scale(Pop_sizes)[,1],
-         MCC_5k_norm = scale(-MCC_5km)[,1],
-         score = RMSEpop_norm + MCC_5k_norm) %>%
+         PopHit_5k_norm = scale(-PopHit_5km)[,1],
+         score = RMSEpop_norm + PopHit_5k_norm) %>%
   group_by(type, Tsize, threshold, n_months) %>%
   summarise(mean_score = mean(score, na.rm = T),
             best_score = min(score, na.rm = T),
             mean_500 = mean(MCC_500m, na.rm = T),
             mean_5k = mean(MCC_5km, na.rm = T),
             mean_10k = mean(MCC_10km, na.rm = T),
+            mean_pophit_500 = mean(PopHit_500m, na.rm = T),
+            mean_pophit_5k = mean(PopHit_5km, na.rm = T),
+            mean_pophit_10k = mean(PopHit_10km, na.rm = T),
             mean_pop = mean(Pop_sizes, na.rm = T),
             best_500 = max(MCC_500m, na.rm = T),
             best_5k = max(MCC_5km, na.rm = T),
             best_10k = max(MCC_10km, na.rm = T),
+            best_pophit_500 = max(PopHit_500m, na.rm = T),
+            best_pophit_5k = max(PopHit_5km, na.rm = T),
+            best_pophit_10k = max(PopHit_10km, na.rm = T),
             best_pop = min(Pop_sizes, na.rm = T)) %>%
   ungroup() %>%
   mutate(weight = abs((mean_score-min(mean_score))/(max(mean_score)-min(mean_score))-1)) %>%
   arrange(mean_score) %>% 
-  dplyr::select(type, Tsize, threshold, n_months, weight, mean_score, mean_5k, mean_pop)
+  dplyr::select(type, Tsize, threshold, n_months, weight, mean_score, mean_5k, mean_pophit_5k, mean_pop)
 
 write.csv(df1, file.path("results", "calibration_summary.csv"), row.names = F)
 write.csv(df1 %>% filter(type == "RCorrected"), 
