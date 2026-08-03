@@ -59,7 +59,7 @@ status_rast <- lapply(status_files, rast_outFiles) %>%
   rast(.)
 presence_rast <- status_rast > -1
 prob_rast <- mean(presence_rast)
-writeRaster(prob_rast, filename = "results/simulations/simulation_runs/FemalePresenceProb_historic_2025.tif")
+writeRaster(status_rast, filename = "results/simulations/simulation_runs/FemalePresenceProb_historic_2025.tif")
 
 travF_rast <- lapply(traveledF_files, rast_outFiles) %>%
   rast(.) %>% mean(.)
@@ -80,11 +80,11 @@ size_hist <- setdiff(size_files, sum_file)
 size_hist <- lapply(size_hist, read.csv) %>%
   bind_rows(.id = "id") %>%
   filter(year < 2023)
-size_hist$tot_size <- rowSums(size_hist[,-c(1,2,9)], na.rm = T)
+size_hist$tot_size <- rowSums(size_hist[,-c(1,8)], na.rm = T)
 
 ggplot() +
   geom_line(data = size_hist, 
-            aes(x = year, y = tot_size, group = id, colour = "Simulations")) +
+            aes(x = year, y = tot_size, group = as.factor(source_run), colour = "Simulations")) +
   geom_line(data = size_obs, 
             aes(x = Year, y = obs_size, colour = "Observed"), size = 2) +
   scale_colour_manual(name = NULL,

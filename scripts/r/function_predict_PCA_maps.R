@@ -1,12 +1,13 @@
 # Predict habitat suitability from PCA axis based on LUCAS vegetation categories and elevation using a GAM
 
-predict_habitat_suitability <- function(
+predict_PCA_maps <- function(
     veg_rast,
     elev_rast,
+    road_rast,
     template_raster,
     pca_path             = "veg_pca.rds",
     gam_path             = "gam_model.rds",
-    output_path          = "predicted_habitat.tif",
+    output_path          = NULL,
     name_prediction_type = "predicted_habitat_suitability",
     pca_var_threshold    = PCA_VAR_THRESHOLD,
     pca_max_pcs          = PCA_MAX_PCS
@@ -28,12 +29,15 @@ predict_habitat_suitability <- function(
   # Load rasters
   r_veg  <- veg_rast
   r_elev <- elev_rast
+  r_road <- road_rast
   
   if (!terra::same.crs(r_veg,  r_tmpl)) r_veg  <- terra::project(veg_rast,  terra::crs(r_tmpl), method = "bilinear")
   if (!terra::same.crs(r_elev, r_tmpl)) r_elev <- terra::project(r_elev, terra::crs(r_tmpl), method = "bilinear")
+  if (!terra::same.crs(r_road, r_tmpl)) r_elev <- terra::project(r_road, terra::crs(r_tmpl), method = "bilinear")
   
   r_veg  <- terra::crop(r_veg,  r_tmpl)
   r_elev <- terra::crop(r_elev, r_tmpl)
+  r_road <- terra::crop(r_road, r_tmpl)
   
   xy_all <- terra::xyFromCell(r_tmpl, seq_len(terra::ncell(r_tmpl)))
   
@@ -44,6 +48,7 @@ predict_habitat_suitability <- function(
   # Resample to template resolution
   r_veg  <- terra::resample(r_veg,  r_tmpl, method = "bilinear")
   r_elev <- terra::resample(r_elev, r_tmpl, method = "bilinear")
+  r_road <- terra::resample(r_road, r_tmpl, method = "bilinear")
   names(r_elev) <- "elevation"
   
   # Apply the same veg_cols filter used during training
@@ -95,7 +100,7 @@ predict_habitat_suitability <- function(
   names(r_mahal) <- "mahalanobis_distance"
   
   # Predict
-  pred_stack <- c(r_elev, r_fpcs, r_x, r_y)
+  pred_stack <- c(r_elev, r_road, r_fpcs, r_x, r_y)
   
   predict_gam_fun <- function(model, data, ...) {
     mgcv::predict.bam(model, newdata = data, type = "response", ...)
@@ -103,6 +108,8 @@ predict_habitat_suitability <- function(
   
   r_pred <- terra::predict(pred_stack, gam_obj,
                            fun = predict_gam_fun, na.rm = TRUE)
+  r_pred <- app(r_pred, exp)
+  
   names(r_pred) <- name_prediction_type
   
   # Only keep the mainland iberia area's (spain/portugal)
@@ -113,13 +120,14 @@ predict_habitat_suitability <- function(
   r_pred  <- terra::mask(r_pred, iberia)
   r_mahal <- terra::mask(r_mahal, iberia)
   
-  
-  terra::writeRaster(r_pred,   output_path, overwrite = TRUE)
-  terra::writeRaster(r_mahal,  sub("\\.tif", "_extrapolation_risk.tif", output_path), overwrite = TRUE)
-  
-  cat(sprintf("  Saved future prediction → %s\n", output_path))
-  cat(sprintf("  Saved extrapolation risk → %s\n",
-              sub("\\.tif", "_extrapolation_risk.tif", output_path)))
+  if(!is.null(output_path)){
+    terra::writeRaster(r_pred,   output_path, overwrite = TRUE)
+    terra::writeRaster(r_mahal,  sub("\\.tif", "_extrapolation_risk.tif", output_path), overwrite = TRUE)
+    
+    cat(sprintf("  Saved future prediction → %s\n", output_path))
+    cat(sprintf("  Saved extrapolation risk → %s\n",
+                sub("\\.tif", "_extrapolation_risk.tif", output_path)))
+  }
   
   return(list(predicted = r_pred,
               extrapolation_risk = r_mahal))
