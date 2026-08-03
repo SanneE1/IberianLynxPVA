@@ -87,6 +87,9 @@ for(s in Tsize) {
     
     mcc <- mean_MCC(obs_dir = obs_dir, sim_data = model_output, hab_rast = file.path("data", "GIS_maps", "Lynx_HabitatMap_LUCAS_2015.asc"))
     
+    pophit <- mean_pop_hit(obs_dir = obs_dir, sim_data = model_output,
+                           hab_rast = file.path("data", "GIS_maps", "Lynx_HabitatMap_LUCAS_2015.asc"))
+    
     popsizes <- compare_pop_sizes(size_file = file.path("data", "original_data", "2025.08.06_LynxConnectWebsiteCensusNumber.csv"), 
                                   sim_data = model_output)
     
@@ -98,7 +101,12 @@ for(s in Tsize) {
                          "MCC_500m" = mcc$mcc_500m,
                          "MCC_5km" = mcc$mcc_5km,
                          "MCC_10km" = mcc$mcc_10km,
-                         "Pop_sizes" = popsizes)
+                         "Pop_sizes" = popsizes,
+                         "PopHit_500m" = pophit$PopHit_500m,
+                         "PopHit_5km" = pophit$PopHit_5km,
+                         "PopHit_10km" = pophit$PopHit_10km,
+                         "PopHit_meanDistKm" = pophit$PopHit_meanDistKm,
+                         "PopHit_medianDistKm" = pophit$PopHit_medianDistKm)
     
     result_df <- rbind(result_df, result)
     }

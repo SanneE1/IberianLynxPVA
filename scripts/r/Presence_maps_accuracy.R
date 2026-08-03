@@ -145,4 +145,74 @@ mean_MCC <- function(obs_dir, sim_data, hab_rast) {
 
 
 
+# Scores whether the simulation puts presence in or near each known
+# population, using the same buffer distances as mean_MCC (500m/5km/10km).
+#
+# obs_dir  : folder of .shp files, one per population (same convention as mean_MCC)
+# sim_data : simulation output folder (same as passed to mean_MCC)
+# hab_rast : path to habitat raster used as the template grid
+#
+# Returns a one-row data.frame:
+#   PopHit_500m/5km/10km : proportion of populations with simulated presence
+#                          within that distance (hit rate)
+#   PopHit_meanDistKm / PopHit_medianDistKm : distance (km) from each
+#                          population to the nearest simulated presence,
+#                          averaged across populations
+mean_pop_hit <- function(obs_dir, sim_data, hab_rast,
+                         buffers = c(m500 = 500, km5 = 5000, km10 = 10000)) {
+  source(file.path("scripts", "r", "Rasterize_output_maps.R"))
+  
+  obs_files <- list.files(obs_dir, pattern = ".shp", full.names = TRUE)
+  obs_data <- lapply(obs_files, vect)
+  names(obs_data) <- gsub(".shp", "", basename(obs_files))
+  
+  hab_raster <- rast(hab_rast)
+  
+  hit_500 <- c()
+  hit_5   <- c()
+  hit_10  <- c()
+  dist_km <- c()
+  
+  for (n in names(obs_data)) {
+    
+    obs_pr <- project(obs_data[[n]], crs(hab_raster))
+    
+    sim_file <- list.files(sim_data, pattern = n, full.names = TRUE, recursive = TRUE)
+    if (length(sim_file) == 0) { next }
+    
+    sim_rast <- csvToRaster(sim_file[grep("FemalesMap_status", sim_file)],
+                            hab_raster, return_df = TRUE, plot = FALSE)
+    
+    # occupied = 1, everything else NA (so distance() measures distance
+    # from every cell to the nearest occupied cell)
+    sim_presence <- ifel(sim_rast == -1, NA, 1)
+    
+    if (all(is.na(values(sim_presence)))) {
+      # simulation produced no individuals anywhere: automatic miss
+      hit_500 <- c(hit_500, 0)
+      hit_5   <- c(hit_5,   0)
+      hit_10  <- c(hit_10,  0)
+      dist_km <- c(dist_km, NA)
+      next
+    }
+    
+    dist_rast <- distance(sim_presence)  # metres, to nearest occupied cell
+    
+    d <- terra::extract(dist_rast, obs_pr, fun = min, na.rm = TRUE)[, 2]
+    d <- min(d, na.rm = TRUE)  # collapse in case a population has >1 feature
+    
+    hit_500 <- c(hit_500, as.numeric(d <= buffers["m500"]))
+    hit_5   <- c(hit_5,   as.numeric(d <= buffers["km5"]))
+    hit_10  <- c(hit_10,  as.numeric(d <= buffers["km10"]))
+    dist_km <- c(dist_km, d / 1000)
+  }
+  
+  data.frame(
+    PopHit_500m = mean(hit_500, na.rm = TRUE),
+    PopHit_5km  = mean(hit_5,   na.rm = TRUE),
+    PopHit_10km = mean(hit_10,  na.rm = TRUE),
+    PopHit_meanDistKm   = mean(dist_km, na.rm = TRUE),
+    PopHit_medianDistKm = median(dist_km, na.rm = TRUE)
+  )
+}
 

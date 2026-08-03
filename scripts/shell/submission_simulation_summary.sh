@@ -19,6 +19,6 @@ module load Python/3.10.4
 module load OpenMPI/4.1.4
 module load Bottleneck/1.3.7
 
-python scripts/python/get_summary_maps_from_simulations.py "$SIM_DIR" "$OUTPUT_DIR" 
+python scripts/python/get_summary_maps_from_simulations.py "$SIM_DIR" "$OUTPUT_DIR" --template data/GIS_maps/Peninsula_500_template.tif
 
 #rm -r "$SIM_DIR"
