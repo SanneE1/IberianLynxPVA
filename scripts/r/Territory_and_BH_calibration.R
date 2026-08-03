@@ -38,7 +38,7 @@ if(!dir.exists(model_output)){
 # Set calibration parameter combinations
 #----------------------------------------
 
-Tsize <- c(6,8,10,12)
+Tsize <- seq(from = 8, to = 40, by = 4)
 threshold <- seq(from = 3, to = 12, by = 3)
 n_months <- c(6,9,12)
 
