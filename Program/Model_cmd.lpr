@@ -50,11 +50,13 @@ begin
     else if (LineSplit[0] = 'lynx_demography') then paramname_lynx := LineSplit[1]
     else if (LineSplit[0] = 'mapname_lynx') then mapname_lynx := LineSplit[1]
     else if (LineSplit[0] = 'breeding_file') then breeding_file := LineSplit[1]
+    else if (LineSplit[0] = 'prey_file') then prey_file := LineSplit[1]
     else if (LineSplit[0] = 'map_lynx_pops') then mapPops := LineSplit[1]
     else if (LineSplit[0] = 'lynx_start_size') then start_pop_file := LineSplit[1]
     else if (LineSplit[0] = 'lynx_reintro') then reintro_file := LineSplit[1]
     else if (LineSplit[0] = 'habitat_folder') then habitat_folder := LineSplit[1]
     else if (LineSplit[0] = 'breeding_folder') then breeding_folder := LineSplit[1]
+    else if (LineSplit[0] = 'prey_folder') then prey_folder := LineSplit[1]
   end;
 
   WriteLn('start_year = ' + IntToStr(start_year));
@@ -63,6 +65,7 @@ begin
   WriteLn('all_year_maps = ' + all_year_maps.ToString(TUseBoolStrs.true));
   WriteLn('habitat_folder = ' + habitat_folder);
   WriteLn('breeding_folder = ' + breeding_folder);
+  WriteLn('prey_folder = ' + prey_folder);
   WriteLn('lynx_demography = ' + ExpandFileName(paramname_lynx));
 
   n_years := (end_year - start_year) + 1;
@@ -77,8 +80,10 @@ start_pop_file := ExpandFileName(start_pop_file);
 
 {Assign demographic variables with current run's values}
 if ParamCount > 2 then Tsize := StrToInt(ParamStr(3));
-if ParamCount > 3 then breeding_folder := ParamStr(4);
+if ParamCount > 3 then prey_folder := ParamStr(4);
+if ParamCount > 4 then breeding_folder := ParamStr(5);
 
+if not (prey_folder = '0') then prey_folder := ExpandFileName(prey_folder);
 if not (breeding_folder = '0') then breeding_folder := ExpandFileName(breeding_folder);
 
 {Setting up the spatial and output variables}
@@ -104,6 +109,16 @@ if not (breeding_folder = '0') then
   else
   begin
   BreedingHabitatMap := ReadMap(ExpandFileName(breeding_file));
+  end;
+
+if not (prey_folder = '0') then
+  begin
+  WriteLn(prey_folder + PathDelim + 'Lynx_PreyMap_' + IntToStr(start_year) + '.txt');
+  PreySuitabilityMap := ReadMap(ExpandFileName(prey_folder + PathDelim + 'Lynx_PreyMap_' + IntToStr(start_year) + '.txt'))
+  end
+  else
+  begin
+  PreySuitabilityMap := ReadMap(ExpandFileName(prey_file));
   end;
 
 PopsMap := ReadMap(mapPops);
@@ -134,11 +149,20 @@ MigrationList := TList.Create;
 SettledList := Tlist.Create;
 OutRepList := TList.Create;
 
+
+
+{============================== RUN SIMULATIONS ==================================================}
+
+
 WriteLn('Start lynx population');
 Startpopulation_lynx;
 
 WriteLn('Start simulation');
-RunSimulation;    {call the procedure to run the population dynamics}
+RunSimulation;
+
+
+{============================== Post-processing ==================================================}
+
 
 {save the results to a text file}
 AssignFile(to_file_out,output_dir + PathDelim + 'lynx_pop_size.csv');

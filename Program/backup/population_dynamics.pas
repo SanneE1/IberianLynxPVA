@@ -70,7 +70,7 @@ begin
           WriteMap3CSV(output_dir + PathDelim + 'maps' + PathDelim + 'MalesMap_status_yr_' + IntToStr(current_year) + '.csv', Malesmap, MapdimX, MapdimY, 0);
           //WriteMap3CSV(output_dir + PathDelim + 'maps' + PathDelim + 'MalesMap_ID_yr_' + IntToStr(current_year) + '.csv', Malesmap, MapdimX, MapdimY, 1);
 
-          WritePopulationToCSV(LynxPopulation, output_dir + PathDelim + 'Lynx_population_data.csv');
+          //WritePopulationToCSV(LynxPopulation, output_dir + PathDelim + 'Lynx_population_data.csv');
 
         end;
 

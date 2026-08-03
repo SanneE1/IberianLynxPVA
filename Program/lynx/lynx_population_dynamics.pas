@@ -93,15 +93,6 @@ begin
 
   CloseFile(popFile);
 
-  {Create a start breeding habitat map}
-  {SetLength(BreedingHabitatMap, Mapdimx + 1, mapdimy + 1);
-
-  for x := 1 to Mapdimx do
-  for y := 1 to Mapdimy do
-  begin
-    if HabitatMapLynx[x,y] = 2 then BreedingHabitatMap[x,y] := 1 else BreedingHabitatMap[x,y] := 0;
-  end; }
-
   {Go through some dispersal cycles, to get Lynxs settled}
   WriteLn('Starting dispersal circles to get lynxes with territories at the beginning');
     

@@ -78,7 +78,7 @@ var
   max_pop_size: integer;
   sum_pop_size: array[1..100] of integer;
   each_pop_sizes: array of array of integer;
-  output_dir, habitat_folder, breeding_folder: string;
+  output_dir, habitat_folder, breeding_folder, prey_folder: string;
   create_maps: boolean = True;
   all_year_maps: boolean = False;
   create_maps_25yrs: boolean = False;
@@ -94,7 +94,7 @@ var
   Lynx: PLynx;
   L_ID_tracker: integer;
   LynxPopulationSize: integer;
-  paramname_lynx, start_pop_file, reintro_file, breeding_file: string;
+  paramname_lynx, start_pop_file, reintro_file, breeding_file, prey_file: string;
   pop_status_array: Array2Dinteger;
   to_file_out: TextFile;
 
@@ -102,6 +102,7 @@ var
   mapname_lynx, mapPops: string;
   HabitatMapLynx: Array2Dinteger;
   BreedingHabitatMap: Array2Dinteger;
+  PreySuitabilityMap: Array2Dinteger;
   PopsMap: Array2Dinteger;
   MalesMap: Array3Dinteger;
   FemalesMap: Array3Dinteger;
@@ -152,6 +153,7 @@ finalization
 
  HabitatMapLynx := nil;
  BreedingHabitatMap := nil;
+ PreySuitabilityMap := nil;
  PopsMap := nil;
 
  for a := 0 to LynxPopulation.Count - 1 do

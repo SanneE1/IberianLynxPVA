@@ -80,7 +80,7 @@ var
   each_pop_sizes: array of array of integer;
   output_dir, habitat_folder, breeding_folder: string;
   create_maps: boolean = True;
-  all_month_maps: boolean = False;
+  all_year_maps: boolean = False;
   create_maps_25yrs: boolean = False;
   create_2yr_month_maps: boolean = False;
 

@@ -41,6 +41,12 @@ begin
             BreedingHabitatMap := ReadMap(breeding_folder + PathDelim + 'Lynx_BreedingMap_' + IntToStr(current_year) + '.txt');
           end;
 
+        if not (prey_folder = '0') then
+          begin
+          Write('Reading new prey suitability maps - ');
+            PreySuitabilityMap := ReadMap(prey_folder + PathDelim + 'Lynx_PreyMap_' + IntToStr(current_year) + '.txt');
+          end;
+
         if (current_year >= 2009) and (current_year < 2025) then
         Lynx_reintroduction(current_year);
 
@@ -50,8 +56,6 @@ begin
 
         Write('From pop size ' + IntToStr(LynxPopulation.Count));
         if (month = 4) then reproduction;               // Reproduction happens at the end of March
-
-        survival;                       // Determine which individuals survive this day
 
         for day := 1 to days_in_month[month] do
         begin
