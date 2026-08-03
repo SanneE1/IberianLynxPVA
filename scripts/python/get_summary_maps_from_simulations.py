@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -13,7 +14,67 @@ except ImportError:
     USE_BOTTLENECK = False
     print("Bottleneck not found, using NumPy (consider installing: pip install bottleneck)")
 
-def calculate_matrix_statistics(folder_paths, output_folder, confidence_level=0.95):
+try:
+    import rasterio
+    HAS_RASTERIO = True
+except ImportError:
+    HAS_RASTERIO = False
+
+
+def read_template_raster(template_path):
+    if template_path is None:
+        return None
+    if not HAS_RASTERIO:
+        raise ImportError(
+            "rasterio is required to create GeoTIFF outputs. Install it with: pip install rasterio"
+        )
+
+    template_path = Path(template_path)
+    if not template_path.exists():
+        raise FileNotFoundError(f"Template raster not found: {template_path}")
+
+    with rasterio.open(template_path) as src:
+        profile = src.profile.copy()
+        shape = (src.height, src.width)
+        nodata = src.nodata
+
+    profile.update(dtype=rasterio.float32, count=1)
+    if nodata is not None:
+        profile.update(nodata=np.float32(nodata))
+
+    return {
+        "profile": profile,
+        "shape": shape,
+        "nodata": nodata,
+    }
+
+
+def save_geotiff(array, out_path, template_info):
+    if template_info is None:
+        return
+
+    array = np.asarray(array, dtype=np.float32)
+    template_shape = template_info["shape"]
+    if array.shape != template_shape:
+        raise ValueError(
+            f"Array shape {array.shape} does not match template raster shape {template_shape}"
+        )
+
+    profile = template_info["profile"].copy()
+    if template_info["nodata"] is not None:
+        array = np.where(np.isfinite(array), array, np.float32(template_info["nodata"]))
+    else:
+        profile["nodata"] = np.float32(np.nan)
+
+    with rasterio.open(out_path, "w", **profile) as dst:
+        dst.write(array, 1)
+
+
+def save_csv(array, out_path):
+    pd.DataFrame(array).to_csv(out_path, index=False, header=False)
+
+
+def calculate_matrix_statistics(folder_paths, output_folder, confidence_level=0.95, template_info=None):
     """
     Calculate occupancy probability (value > 0) for each cell across multiple
     txt matrices. For files with "traveled" in the filename, instead compute
@@ -85,21 +146,13 @@ def calculate_matrix_statistics(folder_paths, output_folder, confidence_level=0.
             lower_ci = mean_matrix - margin_error
             upper_ci = mean_matrix + margin_error
 
-            pd.DataFrame(mean_matrix).to_csv(
-                output_path / f"{base_name}_mean.csv",
-                index=False,
-                header=False
-            )
-            pd.DataFrame(lower_ci).to_csv(
-                output_path / f"{base_name}_lower_ci.csv",
-                index=False,
-                header=False
-            )
-            pd.DataFrame(upper_ci).to_csv(
-                output_path / f"{base_name}_upper_ci.csv",
-                index=False,
-                header=False
-            )
+            save_csv(mean_matrix, output_path / f"{base_name}_mean.csv")
+            save_csv(lower_ci, output_path / f"{base_name}_lower_ci.csv")
+            save_csv(upper_ci, output_path / f"{base_name}_upper_ci.csv")
+
+            save_geotiff(mean_matrix, output_path / f"{base_name}_mean.tif", template_info)
+            save_geotiff(lower_ci, output_path / f"{base_name}_lower_ci.tif", template_info)
+            save_geotiff(upper_ci, output_path / f"{base_name}_upper_ci.tif", template_info)
 
         else:
             print(f"  Computing occupancy probability across {n_samples} matrices...")
@@ -107,32 +160,48 @@ def calculate_matrix_statistics(folder_paths, output_folder, confidence_level=0.
             occupied = matrices_array > 0
             occupancy_prob = np.mean(occupied, axis=0)
 
-            pd.DataFrame(occupancy_prob).to_csv(
-                output_path / f"{base_name}_occupancy_prob.csv",
-                index=False,
-                header=False
-            )
-        
+            save_csv(occupancy_prob, output_path / f"{base_name}_occupancy_prob.csv")
+            save_geotiff(occupancy_prob, output_path / f"{base_name}_occupancy_prob.tif", template_info)
         
 
 
 if __name__ == "__main__":
-    # Usage: python script.py <parent_directory> <output_folder>
-    # Example: python script.py ./data_folders ./summary_statistics
-    
-    parent_dir = Path(sys.argv[1])
-    output_folder = sys.argv[2]
-    
-    # Get all subdirectories in the parent directory
-    folders = [str(f) for f in parent_dir.iterdir() if f.is_dir()]
-    
+    parser = argparse.ArgumentParser(
+        description="Summarize simulation matrices as CSV and optional GeoTIFF rasters."
+    )
+    parser.add_argument("parent_directory", type=Path, help="Parent directory containing simulation folders")
+    parser.add_argument("output_folder", type=Path, help="Folder where summaries will be saved")
+    parser.add_argument(
+        "--template",
+        "-t",
+        type=Path,
+        default=None,
+        help="Optional template GeoTIFF file to write raster outputs"
+    )
+    parser.add_argument(
+        "--confidence",
+        type=float,
+        default=0.95,
+        help="Confidence level for traveled mean/CI calculations"
+    )
+    args = parser.parse_args()
+
+    folders = sorted([str(f) for f in args.parent_directory.iterdir() if f.is_dir()])
     if not folders:
-        print(f"No subdirectories found in {parent_dir}")
+        print(f"No subdirectories found in {args.parent_directory}")
         sys.exit(1)
-    
+
     print(f"Found {len(folders)} folders to process:")
     for folder in folders:
         print(f"  - {folder}")
-    
-    # Run the calculation
-    calculate_matrix_statistics(folders, output_folder)
+
+    template_info = None
+    if args.template is not None:
+        template_info = read_template_raster(args.template)
+
+    calculate_matrix_statistics(
+        folders,
+        args.output_folder,
+        confidence_level=args.confidence,
+        template_info=template_info,
+    )
