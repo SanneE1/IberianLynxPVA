@@ -23,145 +23,35 @@ peninsula_template <- rast(
 )
 
 template <- resample(peninsula, peninsula_template)
-template <- ifel(template < 45, 1, NA)
+template <- ifel(template < 40, 1, NA)
 
 writeRaster(template, "data/GIS_maps/Peninsula_500_template.tif", 
             datatype = "INT2S", overwrite = TRUE, NAflag = -9999)
 
 
 # --------------------------------------
-# HABITAT MAP
+# DISPERSAL HABITAT MAP
 # --------------------------------------
 
-# Reclassification table --- Based on Revilla 2015 (both options)
-reclass_Rev1 <- as.matrix(data.frame(
-  old = c(1:44, 48),
-  new = c(rep(0,9), rep(1,13),2,2,2,1,2,2,2,rep(1,4),0,0,1, rep(0,9))
-))
-
-reclass_Rev2 <- as.matrix(data.frame(
-  old = c(1:44, 48),
-  new = c(rep(0,9), rep(1,12),2,2,2,2,1,2,2,2,rep(1,4),0,0,1, rep(0,9))
-))
-
-# Perform the reclassification
-# Convert the reclass_table into a matrix for terra::classify
-reclas_peninsula1 <- classify(peninsula, reclass_Rev1)
-reclas_peninsula2 <- classify(peninsula, reclass_Rev2)
-
-print("Resizing to 500x500m resolution...")
-# Create template rasters with 500m resolution
-peninsula_template <- rast(
-  xmin = xmin(reclas_peninsula1), 
-  xmax = xmax(reclas_peninsula1),
-  ymin = ymin(reclas_peninsula1), 
-  ymax = ymax(reclas_peninsula1),
-  resolution = c(500, 500),
-  crs = crs(reclas_peninsula1)
-)
-
-# Resample instead of project
-reproj_peninsula1 <- resample(reclas_peninsula1, peninsula_template, method = "mode")
-reproj_peninsula2 <- resample(reclas_peninsula2, peninsula_template, method = "mode")
-
-# Save raster maps as asc (easiest to change into format needed for pascal program)
-writeRaster(reproj_peninsula1, file.path(output_dir, "Lynx_HabitatMap_500_Peninsula_Revilla_2015_1.asc"), datatype = "INT2S", overwrite = TRUE)
-writeRaster(reproj_peninsula2, file.path(output_dir, "Lynx_HabitatMap_500_Peninsula_Revilla_2015_2.asc"), datatype = "INT2S", overwrite = TRUE)
-
-
-# ----------------------------------------------------------------------------
-# land cover LANDMATE 
-# ----------------------------------------------------------------------------
-
-## Historic land cover LANDMAtE ----------------------------------------------------------------------------------
-print("Get the dominant category per raster cell in 2015")
-LUCAS_rast <- rast("data/original_data/LUC_historic_landcover/LUCAS_LUC_v1.1_historical_Europe_0.1deg_2010_2015.nc")
-LUCAS_rast <- LUCAS_rast[[c(81:96)]]
-
-writeRaster(LUCAS_rast, "data/original_data/LUC_historic_landcover/LUCAS_LUC_2015.nc", 
-            datatype = "INT2S", overwrite = TRUE, NAflag = -9999)
-
-LUCAS_rast <- project(LUCAS_rast, crs(peninsula_template))
-
-barrier <- sum(LUCAS_rast[[c(12, 15)]])
-matrix <- sum(LUCAS_rast[[c(9:11, 13, 14, 16)]])
-dispersal <- sum(LUCAS_rast[[c(1:8)]])
-
-new_cat <- c(barrier, matrix, dispersal)
-names(new_cat) <- c(0:2)
-new_cat <- resample(new_cat, peninsula_template, method = "mode") 
-
-new_cat <- which.max(new_cat)
-
-writeRaster(new_cat, file.path(output_dir, "Lynx_HabitatMap_LUCAS_2015.asc"), 
-            datatype = "INT2S", overwrite = TRUE, NAflag = -9999)
-
-
-## Future land cover LANDMAtE ----------------------------------------------------------------------------------
-
-landmade_raster_files = list.files("data/original_data/LUC_future_landcover/", full.names = T)
-
-#go through all files
-for (file in landmade_raster_files) {
-  
-  print(file)
-  # get scenario
-  model <- regmatches(file, regexpr("ssp[[:alnum:]]+", file))
-  
-  # Load nc file
-  full_rast <- rast(file)
-  full_rast <- project(full_rast, crs(peninsula_template))
-  full_rast <-  resample(full_rast, peninsula_template, method = "mode")
-  
-  dates <- unique(time(full_rast))
-  years <- format(dates, "%Y")
-  
-  for(i in c(1:length(dates))){
-    
-    yearly_rast <- subset(full_rast, time(full_rast) == dates[i])
-    barrier <- sum(yearly_rast[[c(12, 15)]])
-    matrix <- sum(yearly_rast[[c(9:11, 13, 14, 16)]])
-    dispersal <- sum(yearly_rast[[c(1:8)]])
-    
-    yearly_rast <- c(barrier, matrix, dispersal)
-    names(yearly_rast) <- c(0:2)
-    
-    yearly_rast <- which.max(yearly_rast)
-    
-    if(!dir.exists(file.path(output_folder, "landmate", model))){
-      dir.create(file.path(output_folder, "landmate", model), recursive = T)
-    }
-    
-    writeRaster(yearly_rast, file.path(output_folder, "landmate", model, paste0("Lynx_HabitatMap_", years[i], ".asc")), 
-                datatype = "INT2S", overwrite = TRUE, NAflag = 0)
-    
-  }
-}
-
-
-
+# Use dispersal resistance surface from Cisneros-araujo to
+# 1) projected the dispersal resistance into the future using landcover change
+# 2) classify all dispersal resistance surfaces into the 3 habitat categories 
+#    required for the IBM 
+source("scripts/r/PCA_dispersal.R")
 
 # --------------------------------------
 # BREEDING HABITAT
 # --------------------------------------
 
-# Reclassification table --- Based on Revilla 2015 (both options)
-reclass_Ford <- as.matrix(data.frame(
-  old = c(1:44, 48),
-  new = c(rep(0,27), 1, 1, rep(0,16))
-))
 
+# Use habitat selection (while in territory) surface from Cisneros-araujo to
+# 1) projected the habitat selection into the future using landcover change
+# 2) classify all surfaces into the 3 habitat categories required for the IBM 
+source("scripts/r/PCA_habitat.R")
 
-# Perform the reclassification
-# Convert the reclass_table into a matrix for terra::classify
-reclas_peninsulaF <- classify(peninsula, reclass_Ford)
-
-# Resize to 500x500m raster size
-reproj_peninsulaF <- resample(reclas_peninsulaF, peninsula_template, method = "mode")
-
-# Save raster maps as asc (easiest to change into format needed for pascal program)
-writeRaster(reproj_peninsulaF, file.path(output_dir, "Lynx_BreedingHabitat_500_Peninsula_Fordham_2013.asc"), datatype = "INT2S", overwrite = TRUE)
-
+# Format map(s) for additional breeding habitat requirements 
+# 1) rivers
+source("scripts/r/Format_breeding_habitat.R")
 
 # --------------------------------------
 # POPULATION MAPS
@@ -199,8 +89,87 @@ pops_rast <- terra::rasterize(result, peninsula_template, field = "subpop_numeri
 levels(pops_rast) <- pops_lookup
 
 plot(pops_rast)
-writeRaster(pops_rast, file.path(output_dir, "Lynx_populations_2022_buffered.asc"), datatype = "INT2S", overwrite = TRUE)
+writeVector(result,  file.path(output_folder, "Lynx_populations_2022_buffered_vector.shp"), overwrite = TRUE)
+writeRaster(pops_rast, file.path(output_folder, "Lynx_populations_2022_buffered.asc"), datatype = "INT2S", overwrite = TRUE)
+writeRaster(pops_rast, file.path(output_folder, "Lynx_populations_2022_buffered.tif"), datatype = "INT2S", overwrite = TRUE)
 
+# ----------------------------------------------------------------------------
+# POPULATION MAPS
+# ----------------------------------------------------------------------------
+
+if(!exists("pops_lookup")){pops_lookup <- read.csv("data/pop_id_lookup.csv")}
+
+if(!exists("result")){
+  presence_buffered <- vect(file.path(output_folder, "Lynx_populations_2022_buffered_vector.shp"))
+} else {
+  presence_buffered <- result
+}
+
+obsAlejandro <- list.files("data/original_data/Annual_distribution_Alejandro/", pattern = ".shp", full.names = T)
+obsAlejandro <- lapply(obsAlejandro, function(x) project(vect(x), crs(template)))
+names(obsAlejandro) <- c(2002:2018)
+
+obsConnect <- list.files("data/original_data/20250825_data_German/Presencias/", pattern = ".shp$", recursive = T, full.names = T)
+obsConnect <- lapply(obsConnect, function(x) project(vect(x), crs(template)))
+names(obsConnect) <- c(2015,2017,2020:2022, 2002:2014, 2021)
+
+
+merged_obs <- lapply(intersect(names(obsAlejandro), names(obsConnect)), function(x) {
+  rbind(obsAlejandro[[x]], obsConnect[[x]])
+})
+
+names(merged_obs) <- intersect(names(obsAlejandro), names(obsConnect))
+
+merged_obs <- c(merged_obs, obsAlejandro[setdiff(names(obsAlejandro), names(obsConnect))], obsConnect[setdiff(names(obsConnect), names(obsAlejandro))])
+merged_obs <- merged_obs[sort(names(merged_obs))]
+
+for (i in seq_along(merged_obs)) {
+  print(i)
+  obs <- merged_obs[[i]]
+  # make sure CRS matches before doing any overlay
+  if (!same.crs(obs, template)) {
+    warning('crs doesnt match template, skipping as you might have forgotten to match crs of either observation data sets')
+    next
+  }
+  
+  # give each feature in "obs" a unique ID to track it through the intersection
+  obs$tmp_id <- seq_len(nrow(obs))
+  
+  obs <- makeValid(obs)
+  
+  # intersect obs polygons with the clean vector polygons
+  inter <- intersect(obs, presence_buffered)
+  
+  # if there's no overlap at all, intersect() can return 0 rows -- guard for that
+  if (nrow(inter) == 0) {
+    warning("No overlap found for: ", f)
+    next
+  }
+  
+  # compute area of each intersected fragment
+  inter$overlap_area <- expanse(inter)
+  
+  # for each original polygon (tmp_id), keep the subpop_numeric with the largest overlap
+  inter_df <- as.data.frame(inter)
+  best_match <- inter_df[order(inter_df$tmp_id, -inter_df$overlap_area), ]
+  best_match <- best_match[!duplicated(best_match$tmp_id), ]
+  
+  # merge the matched subpop_numeric back onto the original "obs" polygons
+  subpop_col <- "subpop_num"
+  
+  match_lookup <- best_match[, c("tmp_id", subpop_col)]
+  obs_df <- as.data.frame(obs)
+  obs_df <- merge(obs_df, match_lookup, by = "tmp_id", all.x = TRUE)
+  
+  values(obs)[, subpop_col] <-
+    obs_df[[subpop_col]][match(obs$tmp_id, obs_df$tmp_id)]
+  obs <- aggregate(obs, by = subpop_col)
+  
+  writeVector(obs, 
+              filename = file.path("data/GIS_maps/presence_vectors/", paste0(names(merged_obs)[i], ".shp")),
+              overwrite = T)
+  
+}
 
 # ----------------------------------------------------------------------------
 # Create population starting file
@@ -215,9 +184,9 @@ pop_sizes <- readxl::read_xlsx("data/original_data/2025.08.06_LynxConnectWebsite
   rename(sizespop = Subpoblación)
 
 pop_key <- data.frame(subpop = c("ANDUJAR_CARDENA_MONT", "Campo de Montiel", "Cornalvo", "DONANA", "GUADALMELLATO", "Guadalmez", 
-                                    "GUARRIZAS", "GUAZUJEROS", "Ibores", "LAS MINAS", "Matachel", "Monfrague",
-                                    "Montes de Toledo", "Ortigas", "PEGALAJAR_CONEX", "RIO SOTILLO", "SETEFILLA",
-                                    "SIERRA ARANA", "Valdecañas", "Valdecigüeñas", "Vale do Guadiana"),
+                                 "GUARRIZAS", "GUAZUJEROS", "Ibores", "LAS MINAS", "Matachel", "Monfrague",
+                                 "Montes de Toledo", "Ortigas", "PEGALAJAR_CONEX", "RIO SOTILLO", "SETEFILLA",
+                                 "SIERRA ARANA", "Valdecañas", "Valdecigüeñas", "Vale do Guadiana"),
                       sizespop = c("Andújar-Cardeña", "Campo de Montiel", "Cornalvo", "Doñana-Aljarafe", "Guadalmellato", "Guadalmez", 
                                    "Guarrizas", "Guazurejos", "Ibores", "Las Minas", "Matachel", "Monfragüe", 
                                    "Montes de Toledo", "Ortiga", "Pegalajar", "Río Sotillo", "Setefilla",
@@ -252,13 +221,13 @@ reintro <- readxl::read_xlsx("data/original_data/Alejandro_information/250623 Ly
   dplyr::select(sizespop, Year, Sex, Age, Population)
 
 reint_key <- data.frame(subpop = c("ANDUJAR_CARDENA_MONT", "Campo de Montiel", "Cornalvo", "DONANA", "GUADALMELLATO", "Guadalmez", 
-                                 "GUARRIZAS", "GUAZUJEROS", "Ibores", "LAS MINAS", "Matachel", "Monfrague",
-                                 "Montes de Toledo", "Ortigas", "PEGALAJAR_CONEX", "RIO SOTILLO", "SETEFILLA",
-                                 "SIERRA ARANA", "Valdecañas", "Valdecigüeñas", "Vale do Guadiana", "Montes de Toledo"),
-                      sizespop = c("Andújar-Cardeña", "Campo de Montiel", "Cornalvo", "Doñana-Aljarafe", "Guadalmellato", "Guadalmez", 
-                                   "Guarrizas", "Guazurejos", "Ibores", "Las Minas", "Matachel", "Monfragüe", 
-                                   "Montes de Toledo", "Ortiga", "Pegalajar", "Río Sotillo", "Setefilla",
-                                   "Sierra Arana", "Valdecañas", "Valdecigüeñas", "Vale do Guadiana", "Toledo Mountains"))
+                                   "GUARRIZAS", "GUAZUJEROS", "Ibores", "LAS MINAS", "Matachel", "Monfrague",
+                                   "Montes de Toledo", "Ortigas", "PEGALAJAR_CONEX", "RIO SOTILLO", "SETEFILLA",
+                                   "SIERRA ARANA", "Valdecañas", "Valdecigüeñas", "Vale do Guadiana", "Montes de Toledo"),
+                        sizespop = c("Andújar-Cardeña", "Campo de Montiel", "Cornalvo", "Doñana-Aljarafe", "Guadalmellato", "Guadalmez", 
+                                     "Guarrizas", "Guazurejos", "Ibores", "Las Minas", "Matachel", "Monfragüe", 
+                                     "Montes de Toledo", "Ortiga", "Pegalajar", "Río Sotillo", "Setefilla",
+                                     "Sierra Arana", "Valdecañas", "Valdecigüeñas", "Vale do Guadiana", "Toledo Mountains"))
 
 reintro <- left_join(reintro, reint_key)
 reintro <- left_join(reintro, coords)
@@ -285,6 +254,12 @@ write.table(reint_df, file = "data/model_input/Lynx_reintroductions.txt", sep = 
 
 
 # View(as.data.frame(result) %>% select(subpop_numeric))
+
+
+
+# ----------------------------------------------------------------------------
+# Change ASC files to txt model input
+# ----------------------------------------------------------------------------
 
 
 
