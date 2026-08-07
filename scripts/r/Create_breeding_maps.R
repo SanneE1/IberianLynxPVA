@@ -15,7 +15,7 @@ Create_breeding_maps <- function(rabbit_folder,
                                  n_months,
                                  asc_dir = tempfile("breeding_asc_"),
                                  output_dir = NULL,
-                                 hab_file = file.path("data", "GIS_maps", "Lynx_HabitatMap_LUCAS_2015.asc"),
+                                 hab_file = file.path("data", "GIS_maps", "Peninsula_500_template.tif"),
                                  keep_asc = FALSE) {
 
   if (is.null(output_dir)) {
@@ -54,7 +54,7 @@ Create_breeding_maps <- function(rabbit_folder,
     breeding_habitat <- app(threshold_reached, fun = function(x) as.integer(x >= n_months))
 
     writeRaster(breeding_habitat,
-                file.path(asc_dir, paste0("Lynx_BreedingMap_", y, ".asc")),
+                file.path(asc_dir, paste0("Lynx_PreyMap_", y, ".asc")),
                 overwrite = TRUE,
                 datatype = "INT1U")
   }
