@@ -9,7 +9,7 @@
 #SBATCH --error=job_reports/Postprocess_error_%j.log
 
 SIM_DIR=$1
-OUTPUT_DIR="results/simulations/${SIM_DIR}"
+OUTPUT_DIR=$2
 mkdir -p "$OUTPUT_DIR"
 
 module load rama0.4

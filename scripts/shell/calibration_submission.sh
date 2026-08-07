@@ -5,8 +5,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=20G
-#SBATCH --time=12:00:00
-#SBATCH --array=1-12
+#SBATCH --time=24:00:00
+#SBATCH --array=1-15
 #SBATCH --output=job_reports/Lynx_Calibration_output_%A_%a.log
 #SBATCH --error=job_reports/Lynx_Calibration_error_%A_%a.log
 
