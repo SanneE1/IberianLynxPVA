@@ -46,6 +46,14 @@ def setup_logging(log_file: Optional[Path] = None) -> logging.Logger:
     return logger
 
 
+#def get_settings_file(scenario: str, repo_root: Path) -> Path:
+#    model_input = repo_root / "data" / "model_input"
+#    if scenario == "historic":
+#        return model_input / "past_calibration_settings_IPM.txt"
+#    elif scenario in {"ssp245", "ssp585"}:
+#        return model_input / "future_simulation_settings_IPM.txt"
+#    raise ValueError(f"Unsupported scenario: {scenario}")
+
 def get_settings_file(scenario: str, repo_root: Path) -> Path:
     model_input = repo_root / "data" / "model_input"
     if scenario == "historic":
@@ -53,7 +61,6 @@ def get_settings_file(scenario: str, repo_root: Path) -> Path:
     elif scenario in {"ssp245", "ssp585"}:
         return model_input / "future_simulation_settings_IPMcorrected.txt"
     raise ValueError(f"Unsupported scenario: {scenario}")
-
 
 def read_and_sample_calibration(
     calibration_csv: Path,
@@ -221,9 +228,17 @@ def run_summary_script(
     summary_script: Path,
     run_root: Path,
     summary_root: Path,
+    template: Path,
     logger: logging.Logger,
 ) -> bool:
-    cmd = ["python3", str(summary_script), str(run_root), str(summary_root)]
+    cmd = [
+        "python3",
+        str(summary_script),
+        str(run_root),
+        str(summary_root),
+        "--template",
+        str(template),
+    ]
     logger.info("Running summary script: %s", " ".join(cmd))
     try:
         result = subprocess.run(
@@ -341,6 +356,13 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=None,
         help="Path to the summary maps script",
+    )
+
+    parser.add_argument(
+        "--template",
+        type=Path,
+        default=None,
+        help="Path to template TIFF used by summary script",
     )
 
     return parser.parse_args()
@@ -478,7 +500,19 @@ def main() -> int:
 
     summary_maps_root = runs_root / args.scenario / "summary_maps"
     summary_maps_root.mkdir(parents=True, exist_ok=True)
-    if run_summary_script(summary_script, runs_root / args.scenario, summary_maps_root, logger):
+
+    template = (
+        args.template
+        if args.template is not None
+        else repo_root / "data" / "GIS_maps" / "Peninsula_500_template.tif"
+    )
+    logger.info("template=%s", template)
+    if not template.exists():
+        logger.warning("Template not found: %s", template)
+
+    if run_summary_script(
+        summary_script, scenario_root, summary_maps_root, template, logger
+    ):
         logger.info("Summary maps saved in %s", summary_maps_root)
     else:
         logger.warning("Summary map generation failed")
