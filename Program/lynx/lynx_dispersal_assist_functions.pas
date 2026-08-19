@@ -77,7 +77,7 @@ Function ReproductionQuality(x,y:integer):boolean;
 
 begin
   Result:=False;
-  if (BreedingHabitatMap[x,y] = 1) and (PreySuitabilityMap[x,y] = 1) and (HabitatMapLynx[x, y] = 2) then Result := True;
+  if (BreedingHabitatMap[x,y] = 1) and (PreySuitabilityMap[x,y] = 1) then Result := True;
 
 end;
 

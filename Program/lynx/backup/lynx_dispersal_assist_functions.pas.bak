@@ -77,7 +77,7 @@ Function ReproductionQuality(x,y:integer):boolean;
 
 begin
   Result:=False;
-  if (BreedingHabitatMap[x,y] = 1) and (HabitatMapLynx[x, y] = 2) then Result := True;
+  if (BreedingHabitatMap[x,y] = 1) and (PreySuitabilityMap[x,y] = 1) and (HabitatMapLynx[x, y] = 2) then Result := True;
 
 end;
 
@@ -164,10 +164,10 @@ begin
         begin
           dist_min := dist_act;
           Result := i;
-          Exit;
         end;
       end;
       Assert(Result <= 8, 'MoveDir: Result out of range');
+      Exit;
     end
     else
   {Move to the nearby dispersal cell if there's any in sight.}
