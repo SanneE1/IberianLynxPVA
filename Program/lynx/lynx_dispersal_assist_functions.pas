@@ -164,10 +164,10 @@ begin
         begin
           dist_min := dist_act;
           Result := i;
-          Exit;
         end;
       end;
       Assert(Result <= 8, 'MoveDir: Result out of range');
+      Exit;
     end
     else
   {Move to the nearby dispersal cell if there's any in sight.}
