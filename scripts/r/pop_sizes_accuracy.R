@@ -13,11 +13,18 @@ compare_pop_sizes <- function(size_file, sim_data) {
   
   # pops_lookup <- read.csv(file.path("data", "pop_id_lookup.csv"))
   
-  df <- left_join(a,b)  %>%
-    filter(Year < 2023)
-  
-  rmsle = sqrt(mean((log(df$N_obs + 1) - log(df$N_sim + 1))^2, na.rm = T))
-  
-  return(rmsle)
+  df <- left_join(a, b, by = "Year") %>%
+  filter(Year >= 2021, Year <= 2024) %>%
+  mutate(
+    error = N_sim - N_obs,
+    year_weight = if_else(Year == max(Year), 4,
+                   if_else(Year >= max(Year) - 1, 2, 1))
+  )
+
+ rmse_weighted <- sqrt(
+   weighted.mean(df$error^2, df$year_weight, na.rm = TRUE)
+)
+
+  return(rmse_weighted)
   
 }

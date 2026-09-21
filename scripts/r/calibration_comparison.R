@@ -18,69 +18,48 @@ df <- lapply(files, function(x) {
 }) %>% bind_rows()
 
 
+max_RMSE <- max(df$RMSE_sizes, na.rm = T)
+rmse_importance = 0.95
+
+
 df1 <- df %>%
-  mutate(RMSEpop_norm = scale(Pop_sizes)[,1],
-         PopHit_5k_norm = scale(-PopHit_5km)[,1],
-         score = RMSEpop_norm + PopHit_5k_norm) %>%
+  mutate(RMSEpop_norm = 1-(RMSE_sizes /max_RMSE), #scale(RMSE_sizes)[,1],
+         MCC_5km_norm = (MCC_5km + 1) / 2,       #scale(-MCC_5km)[,1],                # Matthews Correlation Coefficient at 5km resolution
+         score = RMSEpop_norm * rmse_importance + MCC_5km_norm * (1- rmse_importance)) %>%
   group_by(type, Tsize, threshold, n_months) %>%
   summarise(mean_score = mean(score, na.rm = T),
             best_score = min(score, na.rm = T),
-            mean_500 = mean(MCC_500m, na.rm = T),
+            mean_RMSEnorm = mean(RMSEpop_norm, na.rm = T),
+            mean_MCCnorm = mean(MCC_5km_norm, na.rm = T),
+#            mean_500 = mean(MCC_500m, na.rm = T),
             mean_5k = mean(MCC_5km, na.rm = T),
-            mean_10k = mean(MCC_10km, na.rm = T),
-            mean_pophit_500 = mean(PopHit_500m, na.rm = T),
+#            mean_10k = mean(MCC_10km, na.rm = T),
+#            mean_pophit_500 = mean(PopHit_500m, na.rm = T),
             mean_pophit_5k = mean(PopHit_5km, na.rm = T),
-            mean_pophit_10k = mean(PopHit_10km, na.rm = T),
-            mean_pop = mean(Pop_sizes, na.rm = T),
-            best_500 = max(MCC_500m, na.rm = T),
+#            mean_pophit_10k = mean(PopHit_10km, na.rm = T),
+            mean_pop = mean(RMSE_sizes, na.rm = T),
+#            best_500 = max(MCC_500m, na.rm = T),
             best_5k = max(MCC_5km, na.rm = T),
-            best_10k = max(MCC_10km, na.rm = T),
-            best_pophit_500 = max(PopHit_500m, na.rm = T),
+#            best_10k = max(MCC_10km, na.rm = T),
+#            best_pophit_500 = max(PopHit_500m, na.rm = T),
             best_pophit_5k = max(PopHit_5km, na.rm = T),
-            best_pophit_10k = max(PopHit_10km, na.rm = T),
-            best_pop = min(Pop_sizes, na.rm = T)) %>%
+#            best_pophit_10k = max(PopHit_10km, na.rm = T),
+            best_pop = min(RMSE_sizes, na.rm = T)) %>%
   ungroup() %>%
-  mutate(weight = abs((mean_score-min(mean_score))/(max(mean_score)-min(mean_score))-1)) %>%
-  arrange(mean_score) %>% 
+  mutate(weight = (exp(mean_score/0.1) / sum(exp(mean_score/0.1)))) %>%  #abs((mean_score-min(mean_score))/(max(mean_score)-min(mean_score))-1)) %>%
+  arrange(desc(mean_score)) %>% 
   dplyr::select(type, Tsize, threshold, n_months, weight, mean_score, mean_5k, mean_pophit_5k, mean_pop)
 
 write.csv(df1, file.path("results", "calibration_summary.csv"), row.names = F)
 write.csv(df1 %>% filter(type == "RCorrected"), 
           file.path("results", "calibration_summary_RCorrected.csv"), row.names = F)
 
-sample_df <- df1 %>% filter(type == "RCorrected") %>% 
-              sample_n(nrow(.), 
-                       size = 500,
-                       weight = weight, replace = T)
-
-write.csv(sample_df, 
-          file.path("results", "simulation_parameters_RCorrected_sampled.csv"), 
-          row.names = F)
-
-sample_df2 <- df1 %>% filter(type == "RIPM") %>% 
-              sample_n(nrow(.), 
-                       size = 500,
-                       weight = weight, replace = T)
-
-write.csv(sample_df2, 
-          file.path("results", "simulation_parameters_RIPM_sampled.csv"), 
-          row.names = F)
-
-sample_df3 <- df1 %>% filter(type == "ROriginal") %>% 
-              sample_n(nrow(.), 
-                       size = 500,
-                       weight = weight, replace = T)
-
-write.csv(sample_df3, 
-          file.path("results", "simulation_parameters_ROriginal_sampled.csv"), 
-          row.names = F)
-
 
 cat('------------------------------------------------\n')
 cat('Top 10 overall with best MCC at 5km and RMSE population estimate:\n')
 cat('------------------------------------------------\n\n\n')
 
-df1 %>% arrange(mean_score) %>% head(10) %>% print()
+df1 %>% arrange(desc(mean_score)) %>% head(10) %>% print()
 
 cat('\n\n------------------------------------------------\n')
 
