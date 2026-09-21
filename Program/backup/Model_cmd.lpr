@@ -6,15 +6,15 @@ uses
   {$IFDEF UNIX}
   cthreads,
   {$ENDIF}
-  Classes, SysUtils,
-  general_functions, general_define_units, Population_dynamics,
-  lynx_input_output_functions, lynx_dispersal_assist_functions, lynx_population_dynamics;
+  Classes, SysUtils, general_functions, general_define_units,
+  Population_dynamics, lynx_input_output_functions,
+  lynx_dispersal_assist_functions, lynx_population_dynamics,
+lynx_pedigree_functions;
 
 {$R *.res}
 var
   LineSplit: TStringArray;
   settings_file, Line: string;
-  x,y: integer;
 
 begin
   randomize; {initialize the pseudorandom number generator}
@@ -46,6 +46,11 @@ begin
       begin
             if (StrToInt(LineSplit[1]) = 1) then
               all_year_maps := True;
+      end
+    else if (LineSplit[0] = 'track_pedigree') then
+      begin
+            if (StrToInt(LineSplit[1]) = 1) then
+              pedigree := True;
       end
     else if (LineSplit[0] = 'lynx_demography') then paramname_lynx := LineSplit[1]
     else if (LineSplit[0] = 'mapname_lynx') then mapname_lynx := LineSplit[1]
@@ -127,9 +132,6 @@ SetLength(MalesMap, Mapdimx + 1, Mapdimy + 1, 2);
 SetLength(FemalesMap, Mapdimx + 1, Mapdimy + 1, 2);
 SetLength(ConnectionMap, Mapdimx + 1, Mapdimy + 1, 2);
 
-
-
-
 WriteLn('Creating output folders if they dont exist');
 if not DirectoryExists(output_dir) then MkDir(output_dir);
 
@@ -137,8 +139,8 @@ output_maps := output_dir + PathDelim + 'maps';
 if not DirectoryExists(output_maps) then MkDir(output_maps);
 
 for a := 1 to n_years do sum_pop_size[a] := 0;
-SetLength(each_pop_sizes, 23);
 
+SetLength(each_pop_sizes, 23);
 for i := 0 to High(each_pop_sizes) do
     SetLength(each_pop_sizes[i], n_years+1);
 
@@ -149,23 +151,43 @@ MigrationList := TList.Create;
 SettledList := Tlist.Create;
 OutRepList := TList.Create;
 
+
+if pedigree then
+  begin
+  WriteLn('setting up pedigree and Inbreeding objects');
+  SetLength(each_pop_IC, 23); // For biological populations
+  for i := 0 to High(each_pop_IC) do
+    SetLength(each_pop_IC[i], n_years+1);
+
+  SetLength(Famtree, 1000);
+  for i := 0 to High(Famtree) do
+    SetLength(Famtree[i], 4);
+  end;
+
+
+
 {============================== RUN SIMULATIONS ==================================================}
+
+
 WriteLn('Start lynx population');
 Startpopulation_lynx;
 
 WriteLn('Start simulation');
-RunSimulation;    {call the procedure to run the population dynamics}
+RunSimulation;
+
 
 {============================== Post-processing ==================================================}
+
+
 {save the results to a text file}
 AssignFile(to_file_out,output_dir + PathDelim + 'lynx_pop_size.csv');
 rewrite(to_file_out); {create txt file}
-writeln(to_file_out, 'year, pop0, pop1, pop2, pop3, pop4, pop5, pop6, pop7, pop8, pop9');
+writeln(to_file_out, 'year, pop0, pop1, pop2, pop3, pop4, pop5, pop6, pop7, pop8, pop9, pop10, pop11, pop12, pop13, pop14, pop15, pop16, pop17, pop18, pop19, pop20, pop21. pop22');
 
 for b := 0 to n_years do
     begin
     write(to_file_out, start_year + b, ',');
-    for a := 0 to 21 do
+    for a := 0 to 22 do
         begin
         write(to_file_out, each_pop_sizes[a,b], ',');
         end;
@@ -191,6 +213,44 @@ for b := 0 to n_years do
     end;
 
 CloseFile(to_file_out);
+
+if pedigree then
+  begin
+  {save the results to a text file}
+  AssignFile(to_file_out,output_dir + PathDelim + 'lynx_pop_IC.csv');
+  rewrite(to_file_out); {create txt file}
+  writeln(to_file_out, 'year, pop0, pop1, pop2, pop3, pop4, pop5, pop6, pop7, pop8, pop9, pop10, pop11, pop12, pop13, pop14, pop15, pop16, pop17, pop18, pop19, pop20, pop21. pop22');
+
+  for b := 0 to n_years do
+  begin
+    write(to_file_out, start_year + b, ',');
+    for a := 0 to 22 do
+    begin
+      write(to_file_out, each_pop_IC[a,b]:0:6, ',');
+    end;
+    writeln(to_file_out);
+  end;
+
+  CloseFile(to_file_out);
+
+  {save the biological population sizes}
+  AssignFile(to_file_out,output_dir + PathDelim + 'lynx_biopop_IC.csv');
+  rewrite(to_file_out); {create txt file}
+  writeln(to_file_out, 'year, Vale, Doñana, SierraMorena, Matachel, MontesDeToledo, OutsidePop');
+
+  for b := 0 to n_years do
+  begin
+    write(to_file_out, start_year + b, ',');
+    write(to_file_out, each_pop_IC[22,b]:0:6, ',');
+    write(to_file_out, each_pop_IC[4,b]:0:6, ',');
+    write(to_file_out, (each_pop_IC[1,b] + each_pop_IC[2,b] + each_pop_IC[5,b] + each_pop_IC[6,b] + each_pop_IC[7,b] + each_pop_IC[8,b] + each_pop_IC[10,b] + each_pop_IC[16,b] + each_pop_IC[18,b] + each_pop_IC[19,b]):0:6, ',');
+    write(to_file_out, (each_pop_IC[3,b] + each_pop_IC[11,b] + each_pop_IC[14,b] + each_pop_IC[17,b] + each_pop_IC[21,b]):0:6, ',');
+    write(to_file_out, (each_pop_IC[9,b] + each_pop_IC[12,b] + each_pop_IC[13,b] + each_pop_IC[20,b]):0:6, ',');
+    writeln(to_file_out, each_pop_IC[0,b]:0:6);
+  end;
+
+  CloseFile(to_file_out);
+end;
 
 if create_maps then
   begin

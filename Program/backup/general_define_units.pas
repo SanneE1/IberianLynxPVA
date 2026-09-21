@@ -10,6 +10,7 @@ uses
 type           {here you declare the data structure for you individuals}
   Array2DInteger = array of array of integer;
   Array3DInteger = array of array of array of integer;
+  Array2Dreal = array of array of real;
 
   MapOfLists = array of array of Tlist;
 
@@ -38,6 +39,9 @@ type           {here you declare the data structure for you individuals}
     // into Open habitat, for them to return to the last known Dispersal habitat they've visited
     homeX: integer;
     homeY: integer;
+
+    IC: real;     // Inbreeding Coefficient
+
   end;
 
   PRabbit = ^RabbitAgent;
@@ -78,7 +82,7 @@ var
   max_pop_size: integer;
   sum_pop_size: array[1..100] of integer;
   each_pop_sizes: array of array of integer;
-  output_dir, habitat_folder, breeding_folder: string;
+  output_dir, habitat_folder, breeding_folder, prey_folder: string;
   create_maps: boolean = True;
   all_year_maps: boolean = False;
   create_maps_25yrs: boolean = False;
@@ -94,7 +98,7 @@ var
   Lynx: PLynx;
   L_ID_tracker: integer;
   LynxPopulationSize: integer;
-  paramname_lynx, start_pop_file, reintro_file, breeding_file: string;
+  paramname_lynx, start_pop_file, reintro_file, breeding_file, prey_file: string;
   pop_status_array: Array2Dinteger;
   to_file_out: TextFile;
 
@@ -102,6 +106,7 @@ var
   mapname_lynx, mapPops: string;
   HabitatMapLynx: Array2Dinteger;
   BreedingHabitatMap: Array2Dinteger;
+  PreySuitabilityMap: Array2Dinteger;
   PopsMap: Array2Dinteger;
   MalesMap: Array3Dinteger;
   FemalesMap: Array3Dinteger;
@@ -136,6 +141,13 @@ var
   L_alpha_steps: real;
   L_theta_d, L_theta_delta, L_delta_theta_long, L_delta_theta_f, L_L, L_N_d, L_beta, L_gamma: real;
 
+  {Lynx - Inbreeding}
+  pedigree: boolean = false;
+  each_pop_IC: array of array of real;
+  Famtree: array of array of real;
+  IC_eff_surv, IC_eff_rep, IC_eff_kittens: real;
+
+
   {Missceleneous // or however you spell that}
    a, i, b, taskID:integer;
    output_maps: string;
@@ -152,6 +164,7 @@ finalization
 
  HabitatMapLynx := nil;
  BreedingHabitatMap := nil;
+ PreySuitabilityMap := nil;
  PopsMap := nil;
 
  for a := 0 to LynxPopulation.Count - 1 do

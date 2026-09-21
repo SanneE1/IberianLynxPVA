@@ -10,6 +10,7 @@ uses
 type           {here you declare the data structure for you individuals}
   Array2DInteger = array of array of integer;
   Array3DInteger = array of array of array of integer;
+  Array2Dreal = array of array of real;
 
   MapOfLists = array of array of Tlist;
 
@@ -38,6 +39,9 @@ type           {here you declare the data structure for you individuals}
     // into Open habitat, for them to return to the last known Dispersal habitat they've visited
     homeX: integer;
     homeY: integer;
+
+    IC: real;     // Inbreeding Coefficient
+
   end;
 
   PRabbit = ^RabbitAgent;
@@ -136,6 +140,14 @@ var
   L_surv_disp_rho: real;
   L_alpha_steps: real;
   L_theta_d, L_theta_delta, L_delta_theta_long, L_delta_theta_f, L_L, L_N_d, L_beta, L_gamma: real;
+  male_T_multiplier: real;
+
+  {Lynx - Inbreeding}
+  pedigree: boolean = false;
+  each_pop_IC: array of array of real;
+  Famtree: array of array of real;
+  IC_eff_surv, IC_eff_rep, IC_eff_kittens: real;
+
 
   {Missceleneous // or however you spell that}
    a, i, b, taskID:integer;

@@ -100,6 +100,10 @@ begin
       else if (LineSplit[0] = 'beta') then L_beta := StrToFloat(LineSplit[1])
       else if (LineSplit[0] = 'gamma') then L_gamma := StrToFloat(LineSplit[1])
       else if (LineSplit[0] = 'n_cycles') then n_cycles := StrToInt(LineSplit[1])
+      else if (LineSplit[0] = 'IC_eff_surv') then IC_eff_surv := StrToFloat(LineSplit[1])
+      else if (LineSplit[0] = 'IC_eff_rep') then IC_eff_rep := StrToFloat(LineSplit[1])
+      else if (LineSplit[0] = 'IC_eff_kittens') then IC_eff_kittens := StrToFloat(LineSplit[1])
+      else if (LineSplit[0] = 'male_T_multiplier') then male_T_multiplier := StrToFloat(LineSplit[1]);
 
    end;
 end;

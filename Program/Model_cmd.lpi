@@ -137,6 +137,10 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="Population_dynamics"/>
       </Unit>
+      <Unit>
+        <Filename Value="lynx\lynx_pedigree_functions.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
