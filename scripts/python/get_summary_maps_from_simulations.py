@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from scipy import stats
+from collections import Counter
 import sys
 
 # Use bottleneck if available for faster operations
@@ -112,19 +113,43 @@ def calculate_matrix_statistics(folder_paths, output_folder, confidence_level=0.
         filename = csv_file.name
         print(f"\nProcessing {filename}...")
         
-        # Collect all matrices for this file
-        matrices = []
+        # Collect matrices and report files that cannot be used for aggregation.
+        matrix_records = []
         
         for folder in folder_paths:
             file_path = Path(folder, "maps") / filename
             if file_path.exists():
-                df = pd.read_csv(file_path, header=None)
-                matrices.append(df.values)
+                try:
+                    df = pd.read_csv(file_path, header=None)
+                except (pd.errors.EmptyDataError, pd.errors.ParserError, ValueError) as error:
+                    print(f"  Skipping unreadable CSV: {file_path} ({error})")
+                    continue
+                matrix_records.append((file_path, df.values))
             else:
                 print(f"  Warning: {file_path} not found, skipping")
         
-        if not matrices:
+        if not matrix_records:
             print(f"  No valid matrices found for {filename}, skipping")
+            continue
+
+        if template_info is not None:
+            expected_shape = template_info["shape"]
+        else:
+            shape_counts = Counter(matrix.shape for _, matrix in matrix_records)
+            expected_shape = shape_counts.most_common(1)[0][0]
+
+        matrices = []
+        for file_path, matrix in matrix_records:
+            if matrix.shape != expected_shape:
+                print(
+                    f"  Skipping incomplete CSV: {file_path} "
+                    f"(shape {matrix.shape}, expected {expected_shape})"
+                )
+                continue
+            matrices.append(matrix)
+
+        if not matrices:
+            print(f"  No matrices with the expected shape found for {filename}, skipping")
             continue
         
         # Stack matrices along a new axis (now shape is: n_folders x rows x cols)
