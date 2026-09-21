@@ -5,24 +5,27 @@ unit lynx_vital_rates;
 interface
 
 uses
-  Classes, SysUtils, Math,
-  lynx_dispersal_assist_functions, general_functions, general_define_units;
+  Classes, SysUtils, Math, Generics.Collections, Types,
+  lynx_dispersal_assist_functions, lynx_pedigree_functions,
+  general_functions, general_define_units;
 
 
 procedure Reproduction;
 procedure Survival;
 procedure Dispersal(day: integer);
 
-
-
 implementation
 
 
 procedure Reproduction;
 var
-  a, x,y, current_litter_size, ls, xy, CurrentDist: integer;
+  a, x,y, current_litter_size, ls, xy, indv_Tsize, CurrentDist: integer;
+  IC_kittens: real;
   temp_X, temp_Y, Temp_mem: word;
   male_present: boolean;
+  PotentialFather: PLynx;
+  mother_ID, father_ID: integer;
+  male_x, male_y: integer;
 begin
 
   with LynxPopulation do
@@ -49,20 +52,29 @@ begin
                     if Malesmap[Lynx^.TerritoryX[xy], Lynx^.TerritoryY[xy], 0] >=2 then
                     begin
                     male_present := true;
+                    male_x := Lynx^.TerritoryX[xy];
+                    male_y := Lynx^.TerritoryY[xy];
                     Break;
                     end;
                 end;
 
+                if pedigree and male_present then
+                begin
+                  PotentialFather := nil;
+                  PotentialFather := FindTerrOwner(LynxPopulation, 'm', male_x, male_y);
+
+                  if (PotentialFather <> nil) then
+                    father_ID := PotentialFather^.ID
+                  else
+                    male_present := false;
+                end;
+
                 if male_present then
+                begin
+                  if pedigree then L_rep_prob:= L_rep_prob * (1 - (IC_eff_rep * Lynx^.IC));
+
                   if random < L_rep_prob then
                   begin
-                    current_litter_size := Round(randg(L_litter_size, L_litter_size_sd));
-
-                    //Save location of the mother, to give to offspring
-                    Temp_X := Lynx^.Coor_X;
-                    Temp_Y := Lynx^.Coor_Y;
-                    Temp_mem := Lynx^.mov_mem;
-
                     {Save locations of mother, incase of a breeding event outside established populations}
                     if create_maps then
                     if Lynx^.Current_pop = 0 then
@@ -74,6 +86,19 @@ begin
                      OutRepList.Add(RepOutsidePop);
                     end;
 
+                    {Do the actual reproduction}
+                    current_litter_size := Round(randg(L_litter_size, L_litter_size_sd));
+
+                    if pedigree then
+                    begin
+                         mother_ID := Lynx^.ID;
+                         IC_kittens:= -1;       //Reset IC_kittens to prevent carry-over from other litters
+                    end;
+
+                    //Save location of the mother, to give to offspring
+                    Temp_X := Lynx^.Coor_X;
+                    Temp_Y := Lynx^.Coor_Y;
+                    Temp_mem := Lynx^.mov_mem;
 
                     {Create a number of new Lynxs}
                     for ls := 1 to current_litter_size do
@@ -96,8 +121,14 @@ begin
                       Lynx^.Current_pop := whichPop(temp_X, temp_Y);
                       Lynx^.Previous_pop := whichPop(temp_X, temp_Y);
 
-                      setLength(Lynx^.TerritoryX, Tsize);
-                      setLength(Lynx^.TerritoryY, Tsize);
+                      {Sex specific Territory size}
+                      if Lynx^.sex = 'm' then
+                         indv_Tsize := Round(Tsize * 2)
+                      else
+                          indv_Tsize := Tsize;
+
+                      setLength(Lynx^.TerritoryX, indv_Tsize);
+                      setLength(Lynx^.TerritoryY, indv_Tsize);
                       ArrayToNegOne(Lynx^.TerritoryX);
                       ArrayToNegOne(Lynx^.TerritoryY);
 
@@ -109,9 +140,35 @@ begin
                       Lynx^.DailySteps := 0;
                       Lynx^.DailyStepsOpen := 0;
 
+                      if pedigree then
+                      begin
+                      {Inbreeding calculations}
+                      // Add new individual to Famtree
+                        if Length(Famtree) = Lynx^.ID then
+                           SetLength(Famtree, Length(Famtree) + 1000);
+
+                         SetLength(Famtree[Lynx^.ID], 4);
+                         Famtree[Lynx^.ID, 0] := Lynx^.ID;
+                         Famtree[Lynx^.ID, 2] := father_ID;
+                         Famtree[Lynx^.ID, 3] := mother_ID;
+
+                      //Only one kitten gets CA and IC calculation
+                        if ls = 1 then
+                           begin
+                             IC_kittens := CalculateIC(Lynx^.ID, Famtree);
+                             if (IC_kittens = -1) then
+                                break;
+                           end;
+
+                        Lynx^.IC:= IC_kittens;
+                        Famtree[Lynx^.ID, 1] := IC_kittens;
+                      end;
+
                       LynxPopulation.add(Lynx);
+
                     end;
                   end;
+                end;
               end;
       end;
   end;
@@ -149,6 +206,15 @@ begin
       surv_p := L_surv_array[Lynx^.Age, 5]     // Toledo
       else surv_p := L_surv_array[Lynx^.Age, 0];     // Other
 
+      {Inbreeding effects}
+      if pedigree then
+      begin
+        if Lynx^.Status=0 then
+        surv_p := surv_p * (1 - (IC_eff_surv * Lynx^.IC))
+        else
+        surv_p := surv_p * (1 - (IC_eff_surv * Lynx^.IC));
+      end;
+
       {Transform annual survival (surv_p) to daily survival (surv_day)}
         surv_day := Power(surv_p, (1 / 365));
 
@@ -157,6 +223,7 @@ begin
           daily_mortality_p := (1-surv_day) + ((1-surv_day) * L_surv_disp_rho * (Lynx^.DailyStepsOpen / (Lynx^.DailySteps + 0.001)));
           surv_day := 1-daily_mortality_p;
         end;
+
 
       {Determine fate of Lynxs}
       die := False;
@@ -171,11 +238,13 @@ begin
             begin
             FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 0]:= -1;
             FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 1]:= -1;
+            FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 2]:= 0;
             end
             else
             begin
             MalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 0]:= -1;
             MalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 1]:= -1;
+            MalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 2]:= 0;
             end;
             Lynx^.TerritoryX[b] := -1;
             Lynx^.TerritoryY[b] := -1;
@@ -188,12 +257,15 @@ end;
 
 procedure Dispersal(day: integer);
 var
-  a, b, d, e, f, g, i, j, new_dir, TestCoordX, TestCoordY, TCount, first_Tcount, FCount, xi, yi, xy, competitor_age : integer;
+  a, b, d, e, f, g, i, j, new_dir, TestCoordX, TestCoordY : integer;
+  TCount, first_Tcount, FCount, xi, yi, xy, competitor_age: integer;
+  indv_Tsize: integer;
   age_m, P_disp_start: real;
   temp_terrX, temp_terrY: array of integer;
   temp_ind: PLynx;
   Iwin, test_cell_available, c_available, already_terr: boolean;
   start_x, start_y: integer;
+  GapCount, MaxGap: integer;
 begin
   with LynxPopulation do
   begin
@@ -202,6 +274,14 @@ begin
 
     begin
       Lynx := items[a];
+
+      {Sex specific Territory size}
+      if Lynx^.sex = 'm' then
+      indv_Tsize := Round(Tsize * 1.5)
+      else
+      indv_TSize := Tsize;
+
+      MaxGap := Round(0.2 * indv_Tsize);
 
       {If the Lynx is a subadult determine if it starts dispersing}
       if (Lynx^.Status = 0) and (Lynx^.Age > 0) then
@@ -220,6 +300,7 @@ begin
       if (Lynx^.Status = 2) then
       begin
         TCount := 0;
+        GapCount := 0;
 
         for b := 0 to length(Lynx^.TerritoryX) - 1 do
         begin
@@ -232,7 +313,7 @@ begin
         end;
 
         {If there's not enough territory, see if there's any unclaimed available}
-        if (TCount < Tsize) then //If TCount is 0 that means that the Lynx will have to move for sure to find new territory
+        if (TCount < indv_Tsize) then //If TCount is 0 that means that the Lynx will have to move for sure to find new territory
         ClaimNewTerrOrStartDispersal;
       end;
 
@@ -240,8 +321,8 @@ begin
 
       if (Lynx^.Status = 1) then
       begin
-        SetLength(temp_terrX, Tsize);
-        SetLength(temp_terrY, Tsize);
+        SetLength(temp_terrX, indv_Tsize);
+        SetLength(temp_terrY, indv_Tsize);
         ArrayToNegOne(temp_terrX);
         ArrayToNegOne(temp_terrY);
 
@@ -323,7 +404,7 @@ begin
 
 
           {If in breeding habitat, check if settlement is possible}
-          if (HabitatMapLynx[TestCoordX, TestCoordY] = 2) and (BreedingHabitatMap[TestCoordX, TestCoordY] = 1) then
+          if ReproductionQuality(TestCoordX, TestCoordY) then
           begin
 
             test_cell_available := False;
@@ -343,20 +424,24 @@ begin
                     xi := TestCoordX + dx[i];
                     yi := TestCoordY + dy[i];
                     if CanMoveHere(xi, yi) then
-                    if ((HabitatMapLynx[xi, yi] = 2) and (BreedingHabitatMap[xi, yi] = 1)) then
+                    if ReproductionQuality(xi, yi) then
                     begin
                       c_available:= False;
-                      c_available:= TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age);
+                      //c_available:= TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age);
+                      c_available := TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age,
+                                                            (Lynx^.Sex = 'm') and (GapCount < MaxGap));
 
                       if c_available then
                     begin
                       temp_terrX[TCount] := xi;
                       temp_terrY[TCount] := yi;
 
+                      if (Lynx^.Sex = 'm') and (Femalesmap[xi, yi, 0] = -1) then
+                        Inc(GapCount);       // <-- new: only counts if it was actually a gap
+
                       Inc(TCount);
 
-
-                      if TCount = Tsize then Break;
+                      if TCount = indv_Tsize then Break;
                       end;
                     end;
 
@@ -364,11 +449,11 @@ begin
 
 
               {Keep looking in adjacent cells if not enough territory has been found yet}
-                if TCount < Tsize then
+                if TCount < indv_Tsize then
                 begin
                   first_Tcount := TCount;
                   j := 0;
-                while (TCount < Tsize) and (j < first_Tcount) do
+                while (TCount < indv_Tsize) and (j < first_Tcount) do
                 begin
                    for i := 1 to 8 do
                   begin
@@ -387,18 +472,24 @@ begin
 
                    if not already_terr then
                     if CanMoveHere(xi, yi) then
-                    if ((HabitatMapLynx[xi, yi] = 2) and (BreedingHabitatMap[xi, yi] = 1)) then
+                    if ReproductionQuality(xi, yi) then
                     begin
                     c_available := False;
-                    c_available:= TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age);
+                    //c_available:= TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age);
+                    c_available := TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age,
+                                                            (Lynx^.Sex = 'm') and (GapCount < MaxGap));
 
                       if c_available then
                     begin
                       temp_terrX[TCount] := xi;
                       temp_terrY[TCount] := yi;
+
+                      if (Lynx^.Sex = 'm') and (Femalesmap[xi, yi, 0] = -1) then
+                        Inc(GapCount);       // <-- new: only counts if it was actually a gap
+
                       Inc(TCount);
 
-                      if TCount = Tsize then Break;
+                      if TCount = indv_Tsize then Break;
                       end;
                     end;
                   end;
@@ -408,7 +499,7 @@ begin
 
 
                   {Check that enough territory has been foundso territory can be removed and assigned according}
-                  if TCount >= Tsize then
+                  if TCount >= indv_Tsize then
                   begin
                     {use temp_terr to remove those coordinates from existing territories}
                     for xy := 0 to TCount - 1 do
@@ -447,11 +538,13 @@ begin
                         begin
                         FemalesMap[temp_terrX[f], temp_terrY[f], 0] := Lynx^.Status;
                         FemalesMap[temp_terrX[f], temp_terrY[f], 1] := Lynx^.Age;
+                        FemalesMap[temp_terrX[f], temp_terrY[f], 2] := Round(Lynx^.IC*10000);
                         end
                         else
                         begin
                           MalesMap[temp_terrX[f], temp_terrY[f], 0] := Lynx^.Status;
                           MalesMap[temp_terrX[f], temp_terrY[f], 1] := Lynx^.Age;
+                          MalesMap[temp_terrX[f], temp_terrY[f], 2] := Round(Lynx^.IC*10000);
                         end;
                       end;
 
@@ -473,7 +566,6 @@ begin
     end;
 
 end;
-
 
 end.
 

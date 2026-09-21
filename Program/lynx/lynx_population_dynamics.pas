@@ -17,7 +17,7 @@ implementation
 
 procedure Startpopulation_lynx;
 var
-  a,b, Tcheck, xy, N, X, Y: integer;
+  a,b, Tcheck, indv_Tsize, xy, N, X, Y: integer;
   lineData: TStringList;
   popFile: TextFile;
   popName: string;
@@ -58,22 +58,25 @@ begin
       if random < 0.5 then Lynx^.sex := 'f'
       else
         Lynx^.sex := 'm';
-        Lynx^.status := 1;
+      Lynx^.status := 1;
 
-        Lynx^.ID := L_ID_tracker;
-        L_ID_tracker := L_ID_tracker + 1;
+      Lynx^.ID := L_ID_tracker;
+      L_ID_tracker := L_ID_tracker + 1;
 
-        Lynx^.Coor_X := X;
-        Lynx^.Coor_Y := Y;
-
+      Lynx^.Coor_X := X;
+      Lynx^.Coor_Y := Y;
 
       Lynx^.Natal_pop := whichPop(Lynx^.Coor_X, Lynx^.Coor_Y);
       Lynx^.Current_pop := whichPop(Lynx^.Coor_X, Lynx^.Coor_Y);
       Lynx^.Previous_pop := whichPop(Lynx^.Coor_X, Lynx^.Coor_Y);
 
+      if Lynx^.sex = 'm' then
+        indv_Tsize := Round(Tsize * male_T_multiplier)
+      else
+        indv_Tsize := Tsize;
 
-      setLength(Lynx^.TerritoryX, Tsize);
-      setLength(Lynx^.TerritoryY, Tsize);
+      setLength(Lynx^.TerritoryX, indv_Tsize);
+      setLength(Lynx^.TerritoryY, indv_Tsize);
       ArrayToNegOne(Lynx^.TerritoryX);
       ArrayToNegOne(Lynx^.TerritoryY);
 
@@ -84,6 +87,24 @@ begin
 
       Lynx^.DailySteps := 0;
       Lynx^.DailyStepsOpen := 0;
+
+      Lynx^.IC := 0;
+
+      if pedigree then
+      begin
+           {Inbreeding calculations}
+           // Add new individual to Famtree
+           if Length(Famtree) = Lynx^.ID then
+              SetLength(Famtree, Length(Famtree) + 1000);
+
+           SetLength(Famtree[Lynx^.ID], 4);
+           Famtree[Lynx^.ID, 0] := Lynx^.ID;
+           Famtree[Lynx^.ID, 1] := Lynx^.IC;
+           Famtree[Lynx^.ID, 2] := -1;
+           Famtree[Lynx^.ID, 3] := -1;
+
+
+      end;
 
       LynxPopulation.add(Lynx);
 
@@ -102,22 +123,25 @@ begin
       WriteLn('Starting dispersal cycle nr. ' + IntToStr(a));
 
       dispersal(a);
-
-      WriteLn('Assigning Territories');
       
       for b := 0 to LynxPopulation.count - 1 do
       begin
       Lynx := Items[b];
 
+      if Lynx^.sex = 'm' then
+        indv_Tsize := Round(Tsize * male_T_multiplier)
+      else
+        indv_Tsize := Tsize;
+
       if (Lynx^.Status = 2) then
       if (Lynx^.Age < L_max_rep_age) then
       begin
           Tcheck := 0;
-          for xy := 0 to Tsize - 1 do
+          for xy := 0 to indv_Tsize - 1 do
           if ((Lynx^.TerritoryX[xy] > 0) and (Lynx^.TerritoryY[xy] > 0)) then
           Tcheck := Tcheck + 1;
 
-          if Tcheck = Tsize then
+          if Tcheck = indv_Tsize then
           begin
           Lynx^.Status := 3;
           
@@ -127,11 +151,14 @@ begin
             begin
             FemalesMap[Lynx^.TerritoryX[xy], Lynx^.TerritoryY[xy], 0] := Lynx^.Status;
             FemalesMap[Lynx^.TerritoryX[xy], Lynx^.TerritoryY[xy], 1] := Lynx^.Age;
+            FemalesMap[Lynx^.TerritoryX[xy], Lynx^.TerritoryY[xy], 2] := Round(Lynx^.IC*10000);
             end
             else
             begin
             MalesMap[Lynx^.TerritoryX[xy], Lynx^.TerritoryY[xy], 0] := Lynx^.Status;
             MalesMap[Lynx^.TerritoryX[xy], Lynx^.TerritoryX[xy], 1] := Lynx^.Age;
+            MalesMap[Lynx^.TerritoryX[xy], Lynx^.TerritoryX[xy], 2] := Round(Lynx^.IC*10000);
+
             end;
           end;
           end;
@@ -145,7 +172,7 @@ begin
 
 procedure Lynx_reintroduction(current_year: integer);
 var
-  X, Y, N, A: integer;
+  X, Y, N, A, indv_Tsize: integer;
   lineData: TStringList;
   popFile: TextFile;
   popName, S: string;
@@ -187,9 +214,13 @@ begin
      Lynx^.Current_pop := whichPop(Lynx^.Coor_X, Lynx^.Coor_Y);
      Lynx^.Previous_pop := whichPop(Lynx^.Coor_X, Lynx^.Coor_Y);
 
+     if Lynx^.sex = 'm' then
+        indv_Tsize := Round(Tsize * male_T_multiplier)
+      else
+        indv_Tsize := Tsize;
 
-     setLength(Lynx^.TerritoryX, Tsize);
-     setLength(Lynx^.TerritoryY, Tsize);
+     setLength(Lynx^.TerritoryX, indv_Tsize);
+     setLength(Lynx^.TerritoryY, indv_Tsize);
      ArrayToNegOne(Lynx^.TerritoryX);
      ArrayToNegOne(Lynx^.TerritoryY);
 
@@ -214,7 +245,7 @@ end;
 
 procedure Lynx_age_and_settle;
 var
- b, xy, Tcheck: integer;
+ b, xy, Tcheck, indv_Tsize: integer;
 begin
 
       LynxPopulationSize := LynxPopulation.Count;
@@ -227,11 +258,18 @@ begin
           Lynx^.Age := Lynx^.Age + 1;
           if (Lynx^.Status = 2) and (Lynx^.Age < L_max_rep_age) then
           begin
+
+          {Sex specific Territory size}
+          if Lynx^.sex = 'm' then
+            indv_Tsize := Round(Tsize * male_T_multiplier)
+          else
+            indv_Tsize := Tsize;
+
           Tcheck := 0;
-          for xy := 0 to Tsize - 1 do
+          for xy := 0 to indv_Tsize - 1 do
           if ((Lynx^.TerritoryX[xy] > 0) and (Lynx^.TerritoryY[xy] > 0)) then Tcheck := Tcheck + 1;
 
-          if Tcheck = Tsize then
+          if Tcheck = indv_Tsize then
           begin
           Lynx^.Status := 3;
 
@@ -249,7 +287,8 @@ begin
           end;
 
           each_pop_sizes[Lynx^.current_pop, (current_year - start_year)] := each_pop_sizes[Lynx^.current_pop, (current_year - start_year)] + 1;
-
+          if pedigree then
+             each_pop_IC[Lynx^.current_pop, (current_year - start_year)] := each_pop_IC[Lynx^.current_pop, (current_year - start_year)] + Lynx^.IC;
         end;
       end;
 

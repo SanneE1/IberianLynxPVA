@@ -19,7 +19,7 @@ function MoveDir: integer;
 
 function FindTerrOwner(population: TList; targetSex: string; targetX, targetY: word): PLynx;
 function Fight(AgeDisperser, AgeEarlySettler: integer; Sex: string): boolean;
-function TerritoryCellAvailable(x,y: integer; Sex:string; disperser_age: integer): boolean;
+function TerritoryCellAvailable(x, y: integer; Sex: string; disperser_age: integer; AllowGap: boolean = False): boolean;
 procedure ClaimNewTerrOrStartDispersal;
 
 implementation
@@ -411,7 +411,7 @@ begin
 
 end;
 
-function TerritoryCellAvailable(x,y: integer; Sex:string; disperser_age: integer): boolean;
+{function TerritoryCellAvailable(x,y: integer; Sex:string; disperser_age: integer): boolean;
 var
   resident_age: integer;
   Iwin: boolean;
@@ -440,36 +440,78 @@ begin
       end;
 
 end;
+}
+
+function TerritoryCellAvailable(x, y: integer; Sex: string; disperser_age: integer; AllowGap: boolean = False): boolean;
+var
+  resident_age: integer;
+  Iwin: boolean;
+begin
+
+  Result := False;
+
+  if ((Sex = 'f') and (Femalesmap[x, y, 0] = 3)) or
+  ((Sex = 'm') and (Malesmap[x, y, 0] = 3)) then
+  Result := False
+  else
+    if ((Sex = 'f') and (Femalesmap[x, y, 0] = -1)) or
+    ((Sex = 'm') and (Malesmap[x, y, 0] = -1) and
+      ((Femalesmap[x, y, 0] >= 2) or (AllowGap and (Femalesmap[x, y, 0] = -1)))) then
+    Result := True
+    else
+      if ((Sex = 'f') and (Femalesmap[x, y, 0] = 2)) or
+      ((Sex = 'm') and (Malesmap[x, y, 0] = 2) and (FemalesMap[x,y,0] >= 2) ) then
+      begin
+      resident_age := -1;
+        if (Sex = 'f') then
+        resident_age := Femalesmap[x, y, 1]
+        else
+          resident_age := Malesmap[x, y, 1];
+        Iwin := fight(disperser_age, resident_age, Sex);
+        if Iwin then Result := True;
+      end;
+
+end;
 
 procedure ClaimNewTerrOrStartDispersal;
+const
+  MaxGap = 4;
 var
   temp_terrX, temp_terrY: array of integer;
   temp_ind: PLynx;
-  b,first_Tcount, TCount,d, e, f, j, i, g, xi, yi, xy: integer;
+  b,first_Tcount, TCount, indv_Tsize, d, e, f, j, i, g, xi, yi, xy: integer;
   already_terr, c_available: boolean;
+  GapCount: integer;
  begin
-        SetLength(temp_terrX, Tsize);
-        SetLength(temp_terrY, Tsize);
-        ArrayToNegOne(temp_terrX);
-        ArrayToNegOne(temp_terrY);
 
-        {Get all current claimed territory} //not already done above, as TCount < TSize for status = 2 should be less common throughout the year once Lynxs are more settled}
-        for b := 0 to length(Lynx^.TerritoryX) - 1 do
-        begin
-          if (Lynx^.TerritoryX[b] > -1) and (Lynx^.TerritoryY[b] > -1) then
-          begin
-          if (Lynx^.Sex = 'f') or
-            ((Lynx^.Sex = 'm') and (FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 0] = 3)) then
-          temp_terrX[b] := Lynx^.TerritoryX[b];
-          temp_terrY[b] := Lynx^.TerritoryY[b];
-          end;
-        end;
+   {Sex specific Territory size}
+   if Lynx^.sex = 'm' then
+      indv_Tsize := Round(Tsize * male_T_multiplier)
+   else
+       indv_Tsize := Tsize;
+
+   SetLength(temp_terrX, indv_Tsize);
+   SetLength(temp_terrY, indv_Tsize);
+   ArrayToNegOne(temp_terrX);
+   ArrayToNegOne(temp_terrY);
+
+   {Get all current claimed territory} //not already done above, as TCount < TSize for status = 2 should be less common throughout the year once Lynxs are more settled}
+   for b := 0 to length(Lynx^.TerritoryX) - 1 do
+   begin
+     if (Lynx^.TerritoryX[b] > -1) and (Lynx^.TerritoryY[b] > -1) then
+     begin
+     if (Lynx^.Sex = 'f') or
+        ((Lynx^.Sex = 'm') and (FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 0] = 3)) then
+        temp_terrX[b] := Lynx^.TerritoryX[b];
+        temp_terrY[b] := Lynx^.TerritoryY[b];
+     end;
+   end;
 
         {See if there's other available territory nearby}
         begin
                   first_Tcount := TCount;
                   j := 0;
-                while (TCount < Tsize) and (j < first_Tcount) do
+                while (TCount < indv_Tsize) and (j < first_Tcount) do
                 begin
                    for i := 1 to 8 do
                   begin
@@ -490,15 +532,21 @@ var
                     if ((HabitatMapLynx[xi, yi] = 2) and (ReproductionQuality(xi, yi))) then
                     begin
                     c_available := False;
-                    c_available:= TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age);
+                    //c_available:= TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age);
+                    c_available := TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age,
+                                                          (Lynx^.Sex = 'm') and (GapCount < MaxGap));
 
                       if c_available then
                     begin
                       temp_terrX[TCount] := xi;
                       temp_terrY[TCount] := yi;
+
+                      if (Lynx^.Sex = 'm') and (Femalesmap[xi, yi, 0] = -1) then
+                        Inc(GapCount);
+
                       Inc(TCount);
 
-                      if TCount = Tsize then Break;
+                      if TCount = indv_Tsize then Break;
                       end;
                     end;
                   end;
@@ -507,7 +555,7 @@ var
                   end;
 
         {If there's enough territory available, assign to Lynx, and make sure Lynx is located within territory}
-        if (TCount = Tsize) then
+        if (TCount = indv_Tsize) then
         begin
           {use temp_terr to remove those coordinates from existing territories}
                     for xy := 0 to TCount - 1 do
@@ -545,11 +593,13 @@ var
                         begin
                         FemalesMap[temp_terrX[f], temp_terrY[f], 0] := Lynx^.Status;
                         FemalesMap[temp_terrX[f], temp_terrY[f], 1] := Lynx^.Age;
+                        FemalesMap[temp_terrX[f], temp_terrY[f], 2] := Round(Lynx^.IC*10000);
                         end
                         else
                         begin
                           MalesMap[temp_terrX[f], temp_terrY[f], 0] := Lynx^.Status;
                           MalesMap[temp_terrX[f], temp_terrY[f], 1] := Lynx^.Age;
+                          MalesMap[temp_terrX[f], temp_terrY[f], 2] := Round(Lynx^.IC*10000);
                         end;
                       end;
         end
@@ -563,11 +613,13 @@ var
             begin
             FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 0]:= -1;
             FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 1]:= -1;
+            FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 2]:= 0;
             end
             else
             begin
             MalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 0]:= -1;
             MalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 1]:= -1;
+            MalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 2]:= 0;
             end;
             Lynx^.TerritoryX[b] := -1;
             Lynx^.TerritoryY[b] := -1;
