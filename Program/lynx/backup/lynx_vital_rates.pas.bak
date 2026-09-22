@@ -26,7 +26,11 @@ var
   PotentialFather: PLynx;
   mother_ID, father_ID: integer;
   male_x, male_y: integer;
+  check_females, check_FwithM, check_Frepr: integer;
 begin
+  check_females := 0;
+  check_FwithM := 0;
+  check_Frepr := 0;
 
   with LynxPopulation do
   begin
@@ -38,6 +42,9 @@ begin
         if Lynx^.Sex = 'm' then Continue;
 
         male_present:= false;
+
+        {To track the actual reproduction probability}
+        check_females := check_females + 1;
 
         {Check that the Lynx is capable of reproduction}
           if Lynx^.status = 3 then
@@ -71,10 +78,17 @@ begin
 
                 if male_present then
                 begin
+
+                  {To track the actual reproduction probability}
+                  check_FwithM := check_FwithM + 1;
+
                   if pedigree then L_rep_prob:= L_rep_prob * (1 - (IC_eff_rep * Lynx^.IC));
 
                   if random < L_rep_prob then
                   begin
+                    {To track the actual reproduction probability}
+                    check_Frepr := check_Frepr + 1;
+
                     {Save locations of mother, incase of a breeding event outside established populations}
                     if create_maps then
                     if Lynx^.Current_pop = 0 then
@@ -123,7 +137,7 @@ begin
 
                       {Sex specific Territory size}
                       if Lynx^.sex = 'm' then
-                         indv_Tsize := Round(Tsize * 2)
+                         indv_Tsize := Round(Tsize * male_T_multiplier)
                       else
                           indv_Tsize := Tsize;
 
@@ -172,6 +186,17 @@ begin
               end;
       end;
   end;
+
+  {To track the actual reproduction probability}
+  WriteLn();
+  WriteLn('Reproduction probability check');
+  WriteLn('Number of Females:' + IntToStr(check_females));
+  WriteLn('Number of Females with Males:'+ IntToStr(check_FwithM));
+  WriteLn('Number of Females reproducing:' + IntToStr(check_Frepr));
+  WriteLn();
+  //WriteLn('Reproduction probability all Females:' + FloatToStr(check_Frepr/check_females));
+  //WriteLn('Reproduction probability Females with Males:' + FloatToStr(check_Frepr/check_FwithM));
+
 end;
 
 procedure Survival;
@@ -277,7 +302,7 @@ begin
 
       {Sex specific Territory size}
       if Lynx^.sex = 'm' then
-      indv_Tsize := Round(Tsize * 1.5)
+      indv_Tsize := Round(Tsize * male_T_multiplier)
       else
       indv_TSize := Tsize;
 

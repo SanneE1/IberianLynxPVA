@@ -17,10 +17,11 @@ implementation
 
 procedure Startpopulation_lynx;
 var
-  a,b, Tcheck, indv_Tsize, xy, N, X, Y: integer;
+  a,b, Tcheck, indv_Tsize, xy, N, X, Y, m: integer;
   lineData: TStringList;
   popFile: TextFile;
   popName: string;
+  check_lynx_2, check_lynx_3: integer;
 begin
   LynxPopulation := TList.Create;
   lineData := TStringList.Create;
@@ -50,7 +51,7 @@ begin
 
      if (X < MapDimX) and (Y < MapDimY) then
      for a := 1 to N do
-    begin
+     begin
       new(Lynx);
 
       Lynx^.age := random(3) + 3;   {alternative: Lynx^.age:=0; }
@@ -116,59 +117,54 @@ begin
 
   {Go through some dispersal cycles, to get Lynxs settled}
   WriteLn('Starting dispersal circles to get lynxes with territories at the beginning');
-    
-  with LynxPopulation do
-  for a := 1 to n_cycles do
+
+  LynxPopulationSize := LynxPopulation.Count;
+
+  for m := 1 to n_cycles do
+  begin
+  WriteLn('Starting dispersal cycle nr. ' + IntToStr(m));
+    for a := 1 to 31 do
     begin
-      WriteLn('Starting dispersal cycle nr. ' + IntToStr(a));
-
       dispersal(a);
-      
-      for b := 0 to LynxPopulation.count - 1 do
-      begin
-      Lynx := Items[b];
-
-      if Lynx^.sex = 'm' then
-        indv_Tsize := Round(Tsize * male_T_multiplier)
-      else
-        indv_Tsize := Tsize;
-
-      if (Lynx^.Status = 2) then
-      if (Lynx^.Age < L_max_rep_age) then
-      begin
-          Tcheck := 0;
-          for xy := 0 to indv_Tsize - 1 do
-          if ((Lynx^.TerritoryX[xy] > 0) and (Lynx^.TerritoryY[xy] > 0)) then
-          Tcheck := Tcheck + 1;
-
-          if Tcheck = indv_Tsize then
-          begin
-          Lynx^.Status := 3;
-          
-          for xy := 0 to Tcheck - 1 do
-            begin
-            if Lynx^.Sex = 'f' then
-            begin
-            FemalesMap[Lynx^.TerritoryX[xy], Lynx^.TerritoryY[xy], 0] := Lynx^.Status;
-            FemalesMap[Lynx^.TerritoryX[xy], Lynx^.TerritoryY[xy], 1] := Lynx^.Age;
-            FemalesMap[Lynx^.TerritoryX[xy], Lynx^.TerritoryY[xy], 2] := Round(Lynx^.IC*10000);
-            end
-            else
-            begin
-            MalesMap[Lynx^.TerritoryX[xy], Lynx^.TerritoryY[xy], 0] := Lynx^.Status;
-            MalesMap[Lynx^.TerritoryX[xy], Lynx^.TerritoryX[xy], 1] := Lynx^.Age;
-            MalesMap[Lynx^.TerritoryX[xy], Lynx^.TerritoryX[xy], 2] := Round(Lynx^.IC*10000);
-
-            end;
-          end;
-          end;
-
-      end;
     end;
 
+    for b := 0 to LynxPopulationSize - 1 do
+        begin
+          Lynx := LynxPopulation.Items[b];
+          if (Lynx^.Status = 2) and (Lynx^.Age < L_max_rep_age) then
+          begin
+
+          {Sex specific Territory size}
+          if Lynx^.sex = 'm' then
+            indv_Tsize := Round(Tsize * male_T_multiplier)
+          else
+            indv_Tsize := Tsize;
+
+          Tcheck := 0;
+          for xy := 0 to indv_Tsize - 1 do
+          if ((Lynx^.TerritoryX[xy] > 0) and (Lynx^.TerritoryY[xy] > 0)) then Tcheck := Tcheck + 1;
+
+          if Tcheck = indv_Tsize then Lynx^.Status := 3;
+          end;
+        end;
+
+    UpdateAbundanceMap;
+
+    check_lynx_2 := 0;
+    check_lynx_3 := 0;
+    for b := 0 to LynxPopulationSize - 1 do
+        begin
+        Lynx := LynxPopulation.Items[b];
+        if Lynx^.Status = 2 then check_lynx_2 := check_lynx_2 + 1;
+        if Lynx^.Status = 3 then check_lynx_3 := check_lynx_3 + 1;
+        end;
+    WriteLn('Total population size =' + IntToStr(LynxPopulationSize));
+    WriteLn('Number of lynx with status 2 =' + IntToStr(check_lynx_2));
+    WriteLn('Number of lynx with status 3 =' + IntToStr(check_lynx_3));
+
   end;
-    WriteLn('Started with Lynx population size of: ' + IntToStr(LynxPopulation.Count));
-  end;
+end;
+
 
 procedure Lynx_reintroduction(current_year: integer);
 var

@@ -23,6 +23,8 @@ begin
     begin
       WriteLn();
       WriteLn('Simulation Year ' + IntToStr(current_year));
+      WriteLn('Starting Population Size ' + IntToStr(LynxPopulation.Count));
+      WriteLn();
 
       for month := 1 to 12 do
       begin
@@ -50,11 +52,8 @@ begin
         if (current_year >= 2009) and (current_year < 2025) then
         Lynx_reintroduction(current_year);
 
-
         end;
 
-
-        Write('From pop size ' + IntToStr(LynxPopulation.Count));
         if (month = 4) then reproduction;               // Reproduction happens at the end of March
 
         for day := 1 to days_in_month[month] do
@@ -62,8 +61,6 @@ begin
         Dispersal(day);
         Survival;
         end;
-
-        WriteLn(' to ' + IntToStr(LynxPopulation.Count));
 
         if (month = 5) and ((current_year = start_year) or all_year_maps or (create_maps_25yrs and (current_year mod 25 = 0))) then
         begin

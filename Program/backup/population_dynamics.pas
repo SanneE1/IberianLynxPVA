@@ -23,6 +23,8 @@ begin
     begin
       WriteLn();
       WriteLn('Simulation Year ' + IntToStr(current_year));
+      WriteLn('Starting Population Size ' + IntToStr(LynxPopulation.Count));
+      WriteLn();
 
       for month := 1 to 12 do
       begin
@@ -50,11 +52,8 @@ begin
         if (current_year >= 2009) and (current_year < 2025) then
         Lynx_reintroduction(current_year);
 
-
         end;
 
-
-        Write('From pop size ' + IntToStr(LynxPopulation.Count));
         if (month = 4) then reproduction;               // Reproduction happens at the end of March
 
         for day := 1 to days_in_month[month] do
@@ -69,9 +68,10 @@ begin
         begin
           WriteLn('Writing maps');
           WriteMap3CSV(output_dir + PathDelim + 'maps' + PathDelim + 'FemalesMap_status_yr_' + IntToStr(current_year) + '.csv', Femalesmap, MapdimX, MapdimY, 0);
-          //WriteMap3CSV(output_dir + PathDelim + 'maps' + PathDelim + 'FemalesMap_ID_yr_' + IntToStr(current_year) + '.csv', Femalesmap, MapdimX, MapdimY, 1);
+          WriteMap3CSV(output_dir + PathDelim + 'maps' + PathDelim + 'FemalesMap_IC_yr_' + IntToStr(current_year) + '.csv', Femalesmap, MapdimX, MapdimY, 2);
+
           WriteMap3CSV(output_dir + PathDelim + 'maps' + PathDelim + 'MalesMap_status_yr_' + IntToStr(current_year) + '.csv', Malesmap, MapdimX, MapdimY, 0);
-          //WriteMap3CSV(output_dir + PathDelim + 'maps' + PathDelim + 'MalesMap_ID_yr_' + IntToStr(current_year) + '.csv', Malesmap, MapdimX, MapdimY, 1);
+          WriteMap3CSV(output_dir + PathDelim + 'maps' + PathDelim + 'MalesMap_IC_yr_' + IntToStr(current_year) + '.csv', Malesmap, MapdimX, MapdimY, 2);
 
           //WritePopulationToCSV(LynxPopulation, output_dir + PathDelim + 'Lynx_population_data.csv');
 

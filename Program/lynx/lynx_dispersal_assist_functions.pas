@@ -474,14 +474,12 @@ begin
 end;
 
 procedure ClaimNewTerrOrStartDispersal;
-const
-  MaxGap = 4;
 var
   temp_terrX, temp_terrY: array of integer;
   temp_ind: PLynx;
   b,first_Tcount, TCount, indv_Tsize, d, e, f, j, i, g, xi, yi, xy: integer;
   already_terr, c_available: boolean;
-  GapCount: integer;
+  GapCount, MaxGap: integer;
  begin
 
    {Sex specific Territory size}
@@ -489,6 +487,10 @@ var
       indv_Tsize := Round(Tsize * male_T_multiplier)
    else
        indv_Tsize := Tsize;
+
+   TCount := 0;
+   MaxGap := Round(0.2 * indv_Tsize);
+   GapCount := 0;
 
    SetLength(temp_terrX, indv_Tsize);
    SetLength(temp_terrY, indv_Tsize);
@@ -502,131 +504,135 @@ var
      begin
      if (Lynx^.Sex = 'f') or
         ((Lynx^.Sex = 'm') and (FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 0] = 3)) then
-        temp_terrX[b] := Lynx^.TerritoryX[b];
-        temp_terrY[b] := Lynx^.TerritoryY[b];
+        begin
+        temp_terrX[TCount] := Lynx^.TerritoryX[b];
+        temp_terrY[TCount] := Lynx^.TerritoryY[b];
+        Inc(TCount);
+        end;
      end;
    end;
 
         {See if there's other available territory nearby}
+   if(TCount < indv_Tsize) then
+   begin
+     first_Tcount := TCount;
+     j := 0;
+     while (TCount < indv_Tsize) and (j < first_Tcount) do
+     begin
+       for i := 1 to 8 do
+       begin
+         xi := temp_terrX[j] + dx[i];
+         yi := temp_terrY[j] + dy[i];
+
+         already_terr := false;
+         for g := 0 to TCount - 1 do
+           begin
+           if (xi = temp_terrX[g]) and (yi = temp_terrY[g]) then
+             begin
+               already_terr := true;
+               Break;
+             end;
+           end;
+
+      if not already_terr then
+      if ((HabitatMapLynx[xi, yi] = 2) and (ReproductionQuality(xi, yi))) then
         begin
-                  first_Tcount := TCount;
-                  j := 0;
-                while (TCount < indv_Tsize) and (j < first_Tcount) do
-                begin
-                   for i := 1 to 8 do
-                  begin
-                   xi := temp_terrX[j] + dx[i];
-                   yi := temp_terrY[j] + dy[i];
+        c_available := False;
+        //c_available:= TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age);
+        c_available := TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age,
+                                              (Lynx^.Sex = 'm') and (GapCount < MaxGap));
 
-                   already_terr := false;
-                   for g := 0 to TCount - 1 do
-                     begin
-                      if (xi = temp_terrX[g]) and (yi = temp_terrY[g]) then
-                      begin
-                      already_terr := true;
-                      Break;
-                      end;
-                     end;
-
-                   if not already_terr then
-                    if ((HabitatMapLynx[xi, yi] = 2) and (ReproductionQuality(xi, yi))) then
-                    begin
-                    c_available := False;
-                    //c_available:= TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age);
-                    c_available := TerritoryCellAvailable(xi, yi, Lynx^.Sex, Lynx^.Age,
-                                                          (Lynx^.Sex = 'm') and (GapCount < MaxGap));
-
-                      if c_available then
-                    begin
-                      temp_terrX[TCount] := xi;
-                      temp_terrY[TCount] := yi;
-
-                      if (Lynx^.Sex = 'm') and (Femalesmap[xi, yi, 0] = -1) then
-                        Inc(GapCount);
-
-                      Inc(TCount);
-
-                      if TCount = indv_Tsize then Break;
-                      end;
-                    end;
-                  end;
-                   j := j + 1;
-                 end;
-                  end;
-
-        {If there's enough territory available, assign to Lynx, and make sure Lynx is located within territory}
-        if (TCount = indv_Tsize) then
+        if c_available then
         begin
-          {use temp_terr to remove those coordinates from existing territories}
-                    for xy := 0 to TCount - 1 do
-                      begin
+          temp_terrX[TCount] := xi;
+          temp_terrY[TCount] := yi;
 
-                        with LynxPopulation do
-                        begin
-                          for d := 0 to LynxPopulation.Count - 1 do
-                          begin
-                            temp_ind := Items[d];
-                            if temp_ind^.Sex = Lynx^.Sex then
-                            begin
-                              with temp_ind^ do
-                                for e := Length(TerritoryX) - 1 downto 0 do
-                                begin
-                                  if (TerritoryX[e] = temp_terrX[xy]) and (TerritoryY[e] = temp_terrY[xy]) then
-                                  begin
-                                    TerritoryX[e] := -1;
-                                    TerritoryY[e] := -1;
-                                  end;
-                                end;
-                            end;
-                          end;
-                        end;
-                      end;
+          if (Lynx^.Sex = 'm') and (Femalesmap[xi, yi, 0] = -1) then
+            Inc(GapCount);
 
-                    {Assign territory to Lynx and change status}
-                    Lynx^.status := 2;
-                      for f := 0 to TCount - 1 do
-                      begin
-                        Lynx^.TerritoryX[f] := temp_terrX[f];
-                        Lynx^.TerritoryY[f] := temp_terrY[f];
+          Inc(TCount);
 
-                        if Lynx^.Sex = 'f' then
-                        begin
-                        FemalesMap[temp_terrX[f], temp_terrY[f], 0] := Lynx^.Status;
-                        FemalesMap[temp_terrX[f], temp_terrY[f], 1] := Lynx^.Age;
-                        FemalesMap[temp_terrX[f], temp_terrY[f], 2] := Round(Lynx^.IC*10000);
-                        end
-                        else
-                        begin
-                          MalesMap[temp_terrX[f], temp_terrY[f], 0] := Lynx^.Status;
-                          MalesMap[temp_terrX[f], temp_terrY[f], 1] := Lynx^.Age;
-                          MalesMap[temp_terrX[f], temp_terrY[f], 2] := Round(Lynx^.IC*10000);
-                        end;
-                      end;
-        end
-        else
-        {Reset territory information to empty and restart dispersal if there's not enough territory}
-        begin
-          for b := 0 to length(Lynx^.TerritoryX) - 1 do
-          begin
-            if (Lynx^.TerritoryX[b] = -1) then Continue;   // If the territory is already set to -1 then it's been 'taken away' already, and we don't need to update the info below
-            if Lynx^.Sex = 'f' then
-            begin
-            FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 0]:= -1;
-            FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 1]:= -1;
-            FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 2]:= 0;
-            end
-            else
-            begin
-            MalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 0]:= -1;
-            MalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 1]:= -1;
-            MalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 2]:= 0;
-            end;
-            Lynx^.TerritoryX[b] := -1;
-            Lynx^.TerritoryY[b] := -1;
-          end;
-          Lynx^.Status := 1;
+          if TCount = indv_Tsize then Break;
         end;
-      end;
+        end;
+       end;
+       j := j + 1;
+     end;
+   end;
+
+   {If there's enough territory available, assign to Lynx, and make sure Lynx is located within territory}
+   if (TCount = indv_Tsize) then
+   begin
+   {use temp_terr to remove those coordinates from existing territories}
+     for xy := 0 to TCount - 1 do
+       begin
+       with LynxPopulation do
+       begin
+         for d := 0 to LynxPopulation.Count - 1 do
+         begin
+           temp_ind := Items[d];
+           if temp_ind^.Sex = Lynx^.Sex then
+           begin
+             with temp_ind^ do
+             for e := Length(TerritoryX) - 1 downto 0 do
+             begin
+               if (TerritoryX[e] = temp_terrX[xy]) and (TerritoryY[e] = temp_terrY[xy]) then
+               begin
+                 TerritoryX[e] := -1;
+                 TerritoryY[e] := -1;
+               end;
+             end;
+           end;
+         end;
+       end;
+       end;
+
+       {Assign territory to Lynx and change status}
+       Lynx^.status := 2;
+       for f := 0 to TCount - 1 do
+       begin
+         Lynx^.TerritoryX[f] := temp_terrX[f];
+         Lynx^.TerritoryY[f] := temp_terrY[f];
+
+         if Lynx^.Sex = 'f' then
+         begin
+           FemalesMap[temp_terrX[f], temp_terrY[f], 0] := Lynx^.Status;
+           FemalesMap[temp_terrX[f], temp_terrY[f], 1] := Lynx^.Age;
+           FemalesMap[temp_terrX[f], temp_terrY[f], 2] := Round(Lynx^.IC*10000);
+         end
+         else
+         begin
+           MalesMap[temp_terrX[f], temp_terrY[f], 0] := Lynx^.Status;
+           MalesMap[temp_terrX[f], temp_terrY[f], 1] := Lynx^.Age;
+           MalesMap[temp_terrX[f], temp_terrY[f], 2] := Round(Lynx^.IC*10000);
+           end;
+       end;
+   end
+   else
+   {Reset territory information to empty and restart dispersal if there's not enough territory}
+   begin
+   for b := 0 to length(Lynx^.TerritoryX) - 1 do
+   begin
+     if (Lynx^.TerritoryX[b] = -1) then Continue;   // If the territory is already set to -1 then it's been 'taken away' already, and we don't need to update the info below
+     if Lynx^.Sex = 'f' then
+     begin
+       FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 0]:= -1;
+       FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 1]:= -1;
+       FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 2]:= 0;
+     end
+     else
+     begin
+       MalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 0]:= -1;
+       MalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 1]:= -1;
+       MalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 2]:= 0;
+     end;
+     Lynx^.TerritoryX[b] := -1;
+     Lynx^.TerritoryY[b] := -1;
+   end;
+   Lynx^.Status := 1;
+   end;
+
+ end;
 
 
 end.

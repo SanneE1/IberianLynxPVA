@@ -116,7 +116,7 @@ begin
 
   for a := 0 to MapdimX - 1 do
     for b := 0 to Mapdimy - 1 do
-      for c := 0 to 1 do           // where 0 is status, 1 is ID
+      for c := 0 to 2 do           // where 0 is status, 1 is ID
     begin
       Malesmap[a, b, c] := -1;      // Empty maps to fill with status and age below
       Femalesmap[a, b, c] := -1;
@@ -143,11 +143,13 @@ begin
             begin
             Femalesmap[x, y, 0] := Lynx^.Status;
             Femalesmap[x, y, 1] := Lynx^.Age;
+            Femalesmap[x, y, 2] := Round(Lynx^.IC*10000);
             end;
           if (s = 'm') then
             begin
             Malesmap[x, y, 0] := Lynx^.Status;
             Malesmap[x, y, 1] := Lynx^.Age;
+            Malesmap[x, y, 2] := Round(Lynx^.IC*10000);
             end;
         end;
       end;
