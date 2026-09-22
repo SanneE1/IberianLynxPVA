@@ -1,4 +1,5 @@
 library(terra)
+library(dplyr)
 
 # ----------------------------------------------------------------------------
 # Summarise rabbit density by territory polygon using the shapefiles in
@@ -19,24 +20,17 @@ library(terra)
 #     - min_density_year
 # ----------------------------------------------------------------------------
 
-read_rabbit_csv_as_raster <- function(file_path, template_rast, template_crs) {
-  mat <- as.matrix(read.csv(file_path, header = FALSE, stringsAsFactors = FALSE))
-  mat <- apply(mat, 2, as.numeric)
+# Paths
+rabbit_base_dir <- "data/Rabbit_output/NC_simulation_Complete_historic"
+territory_root <- "data/GIS_maps/presence_vectors/"
+template_path <- "data/GIS_maps/Peninsula_500_template.tif"
+habitat_rast_path <- "data/original_data/Lynx_movement_resistance_maps_Pablo_Cisneros/capas/habitat_lince_PI_2025.tif"
+out_csv <- "results/population_rabbit_density_summary.csv"
 
-  if (nrow(mat) != nrow(template_rast) || ncol(mat) != ncol(template_rast)) {
-    stop(sprintf(
-      "Matrix dimensions %d x %d do not match template raster %d x %d for %s",
-      nrow(mat), ncol(mat), nrow(template_rast), ncol(template_rast), file_path
-    ))
-  }
+template_rast <- rast(template_path)
+template_crs <- terra::crs(template_rast)
 
-  r <- rast(template_rast)
-  crs(r) <- template_crs
-  values(r) <- mat
-  names(r) <- basename(file_path)
-  r
-}
-
+# functions
 extract_year_month_files <- function(base_dir, line_dir, year) {
   pattern <- sprintf("^Rabbit_Population_distribution_%d_.*\\.csv$", year)
   files <- list.files(file.path(base_dir, line_dir, "maps"),
@@ -50,17 +44,17 @@ extract_polygon_mean <- function(r, territories_vect, n_polygons) {
     terra::extract(r, territories_vect, fun = mean, na.rm = TRUE, exact = FALSE),
     error = function(e) NULL
   )
-
+  
   if (is.null(ex) || nrow(ex) == 0) {
     return(rep(NA_real_, n_polygons))
   }
-
+  
   if (ncol(ex) >= 2) {
     vals <- ex[[ncol(ex)]]
   } else {
     vals <- ex[[1]]
   }
-
+  
   vals <- suppressWarnings(as.numeric(vals))
   if (length(vals) != n_polygons) {
     vals <- rep(NA_real_, n_polygons)
@@ -74,7 +68,7 @@ build_territory_summary <- function(territories, rasters) {
                           territories_vect = territories,
                           n_polygons = nrow(territories))
   monthly_means_mat <- do.call(cbind, monthly_means)
-
+  
   mean_density_year <- apply(monthly_means_mat, 1, function(x) {
     x <- as.numeric(x)
     x <- x[!is.na(x)]
@@ -83,7 +77,7 @@ build_territory_summary <- function(territories, rasters) {
     }
     mean(x)
   })
-
+  
   min_density_year <- apply(monthly_means_mat, 1, function(x) {
     x <- as.numeric(x)
     x <- x[!is.na(x)]
@@ -92,41 +86,135 @@ build_territory_summary <- function(territories, rasters) {
     }
     min(x)
   })
-
+  
   summary_df <- data.frame(
     territory_id = seq_len(nrow(territories)),
     area_km2 = as.numeric(expanse(territories)) / 1e6,
     mean_density_year = mean_density_year,
     min_density_year = min_density_year
   )
-
+  
   if ("territory_label" %in% names(territories)) {
     summary_df$territory_label <- territories$territory_label
   }
-
+  
   summary_df
 }
 
-# Paths
-rabbit_base_dir <- "data/Rabbit_output/NC_simulation_Complete_historic"
-territory_root <- "data/GIS_maps/presence_vectors/"
-template_path <- "data/GIS_maps/Peninsula_500_template.tif"
-out_csv <- "results/population_rabbit_density_summary.csv"
 
-line_dirs <- c("line12", "line13", "line14")
 
-if (!dir.exists("results")) {
-  dir.create("results", recursive = TRUE, showWarnings = FALSE)
+# get the rabbit densities
+if(!file.exists(out_csv)){
+  
+  read_rabbit_csv_as_raster <- function(file_path, template_rast, template_crs) {
+    mat <- as.matrix(read.csv(file_path, header = FALSE, stringsAsFactors = FALSE))
+    mat <- apply(mat, 2, as.numeric)
+    
+    if (nrow(mat) != nrow(template_rast) || ncol(mat) != ncol(template_rast)) {
+      stop(sprintf(
+        "Matrix dimensions %d x %d do not match template raster %d x %d for %s",
+        nrow(mat), ncol(mat), nrow(template_rast), ncol(template_rast), file_path
+      ))
+    }
+    
+    r <- rast(template_rast)
+    crs(r) <- template_crs
+    values(r) <- mat
+    names(r) <- basename(file_path)
+    r
+  }
+  
+  line_dirs <- c("line12", "line13", "line14")
+  
+  if (!dir.exists("results")) {
+    dir.create("results", recursive = TRUE, showWarnings = FALSE)
+  }
+  
+  area_crs <- template_crs
+  
+  shp_files <- list.files(territory_root, pattern = ".shp$", recursive = TRUE, full.names = TRUE)
+  shp_files <- sort(shp_files)
+  
+  all_results <- list()
+  
+  for (shp_path in shp_files) {
+    territories <- vect(shp_path)
+    
+    # Preserve a readable territory identifier if one exists.
+    id_candidates <- c("subpop_num")
+    id_col <- intersect(id_candidates, names(territories))
+    if (length(id_col) > 0) {
+      territories$territory_label <- as.character(territories[[id_col[1]]])
+    } else {
+      territories$territory_label <- paste0("polygon_", seq_len(nrow(territories)))
+    }
+    
+    # Restrict to territories that intersect the raster footprint.
+    template_bbox <- as.polygons(ext(template_rast))
+    crs(template_bbox) <- template_crs
+    overlap_mask <- relate(territories, template_bbox, relation = "intersects")
+    overlap_mask <- as.logical(overlap_mask)
+    
+    territories <- territories[overlap_mask]
+    
+    if (nrow(territories) == 0) {
+      message("No overlapping territories for ", basename(shp_path))
+      next
+    }
+    
+    territories_extract <- territories
+    
+    year_match <- regmatches(basename(shp_path), regexec("([0-9]{4})", basename(shp_path)))[[1]]
+    if (length(year_match) == 0) {
+      message("Skipping shapefile with no year in name: ", shp_path)
+      next
+    }
+    shp_year <- as.integer(year_match[length(year_match)])
+    if (is.na(shp_year) || shp_year < 1900 || shp_year > 2100) {
+      message("Invalid year extracted from shapefile name: ", basename(shp_path))
+      next
+    }
+    
+    for (line_dir in line_dirs) {
+      month_files <- extract_year_month_files(rabbit_base_dir, line_dir, shp_year)
+      if (length(month_files) == 0) {
+        message("No rabbit maps found for ", line_dir, " year ", shp_year)
+        next
+      }
+      
+      rasters <- lapply(month_files, read_rabbit_csv_as_raster,
+                        template_rast = template_rast,
+                        template_crs = template_crs)
+      territory_summary <- build_territory_summary(territories_extract, rasters)
+      
+      territory_summary$source_shapefile <- basename(shp_path)
+      territory_summary$year <- shp_year
+      territory_summary$line_dir <- line_dir
+      territory_summary$territory_label <- territories$territory_label
+      
+      all_results[[length(all_results) + 1]] <- territory_summary
+    }
+  }
+  
+  if (length(all_results) == 0) {
+    stop("No territory summaries were produced.")
+  }
+  
+  out_df <- do.call(rbind, all_results)
+  rownames(out_df) <- NULL
+  
+  write.csv(out_df, out_csv, row.names = FALSE)
+  message("Saved territory summary table to ", out_csv)
+} else {
+  out_df <- read.csv(out_csv)
 }
 
-template_rast <- rast(template_path)
-template_crs <- terra::crs(template_rast)
-
-# Use an equal-area CRS for area calculations and the raster CRS for extraction.
-area_crs <- template_crs
-
+# Get avarage habitat suitability (habitat selection)
 shp_files <- list.files(territory_root, pattern = ".shp$", recursive = TRUE, full.names = TRUE)
 shp_files <- sort(shp_files)
+
+rasters <- rast(habitat_rast_path)
+rasters <- project(rasters, crs(template_crs))
 
 all_results <- list()
 
@@ -141,22 +229,22 @@ for (shp_path in shp_files) {
   } else {
     territories$territory_label <- paste0("polygon_", seq_len(nrow(territories)))
   }
-
+  
   # Restrict to territories that intersect the raster footprint.
   template_bbox <- as.polygons(ext(template_rast))
   crs(template_bbox) <- template_crs
   overlap_mask <- relate(territories, template_bbox, relation = "intersects")
   overlap_mask <- as.logical(overlap_mask)
-
+  
   territories <- territories[overlap_mask]
-
+  
   if (nrow(territories) == 0) {
     message("No overlapping territories for ", basename(shp_path))
     next
   }
-
+  
   territories_extract <- territories
-
+  
   year_match <- regmatches(basename(shp_path), regexec("([0-9]{4})", basename(shp_path)))[[1]]
   if (length(year_match) == 0) {
     message("Skipping shapefile with no year in name: ", shp_path)
@@ -167,34 +255,36 @@ for (shp_path in shp_files) {
     message("Invalid year extracted from shapefile name: ", basename(shp_path))
     next
   }
-
-  for (line_dir in line_dirs) {
-    month_files <- extract_year_month_files(rabbit_base_dir, line_dir, shp_year)
-    if (length(month_files) == 0) {
-      message("No rabbit maps found for ", line_dir, " year ", shp_year)
-      next
-    }
-
-    rasters <- lapply(month_files, read_rabbit_csv_as_raster,
-                      template_rast = template_rast,
-                      template_crs = template_crs)
+  
     territory_summary <- build_territory_summary(territories_extract, rasters)
-
+    colnames(territory_summary) <- gsub(pattern = "density_year", replacement = "hab_selection",
+                                        colnames(territory_summary))
     territory_summary$source_shapefile <- basename(shp_path)
     territory_summary$year <- shp_year
-    territory_summary$line_dir <- line_dir
     territory_summary$territory_label <- territories$territory_label
-
+    
     all_results[[length(all_results) + 1]] <- territory_summary
-  }
+  
 }
 
-if (length(all_results) == 0) {
-  stop("No territory summaries were produced.")
-}
+HS_df <- do.call(rbind, all_results) %>%
+  select(territory_id, mean_hab_selection, min_hab_selection, source_shapefile)
 
-out_df <- do.call(rbind, all_results)
-rownames(out_df) <- NULL
+out_df <- left_join(out_df, HS_df)
 
-write.csv(out_df, out_csv, row.names = FALSE)
-message("Saved territory summary table to ", out_csv)
+## plot results
+
+hist(out_df$mean_density_year)
+hist(out_df$min_density_year)
+hist(out_df$mean_hab_selection)
+
+plot(out_df$mean_density_year, out_df$mean_hab_selection)
+
+
+
+
+
+
+
+
+
