@@ -150,18 +150,6 @@ begin
 
     UpdateAbundanceMap;
 
-    check_lynx_2 := 0;
-    check_lynx_3 := 0;
-    for b := 0 to LynxPopulationSize - 1 do
-        begin
-        Lynx := LynxPopulation.Items[b];
-        if Lynx^.Status = 2 then check_lynx_2 := check_lynx_2 + 1;
-        if Lynx^.Status = 3 then check_lynx_3 := check_lynx_3 + 1;
-        end;
-    WriteLn('Total population size =' + IntToStr(LynxPopulationSize));
-    WriteLn('Number of lynx with status 2 =' + IntToStr(check_lynx_2));
-    WriteLn('Number of lynx with status 3 =' + IntToStr(check_lynx_3));
-
   end;
 end;
 

@@ -26,11 +26,7 @@ var
   PotentialFather: PLynx;
   mother_ID, father_ID: integer;
   male_x, male_y: integer;
-  check_females, check_FwithM, check_Frepr: integer;
 begin
-  check_females := 0;
-  check_FwithM := 0;
-  check_Frepr := 0;
 
   with LynxPopulation do
   begin
@@ -42,9 +38,6 @@ begin
         if Lynx^.Sex = 'm' then Continue;
 
         male_present:= false;
-
-        {To track the actual reproduction probability}
-        check_females := check_females + 1;
 
         {Check that the Lynx is capable of reproduction}
           if Lynx^.status = 3 then
@@ -78,9 +71,6 @@ begin
 
                 if male_present then
                 begin
-
-                  {To track the actual reproduction probability}
-                  check_FwithM := check_FwithM + 1;
 
                   if pedigree then L_rep_prob:= L_rep_prob * (1 - (IC_eff_rep * Lynx^.IC));
 
@@ -186,17 +176,6 @@ begin
               end;
       end;
   end;
-
-  {To track the actual reproduction probability}
-  WriteLn();
-  WriteLn('Reproduction probability check');
-  WriteLn('Number of Females:' + IntToStr(check_females));
-  WriteLn('Number of Females with Males:'+ IntToStr(check_FwithM));
-  WriteLn('Number of Females reproducing:' + IntToStr(check_Frepr));
-  WriteLn();
-  //WriteLn('Reproduction probability all Females:' + FloatToStr(check_Frepr/check_females));
-  //WriteLn('Reproduction probability Females with Males:' + FloatToStr(check_Frepr/check_FwithM));
-
 end;
 
 procedure Survival;
@@ -442,6 +421,7 @@ begin
               temp_terrX[0] := TestCoordX;
               temp_terrY[0] := TestCoordY;
               TCount := 1;
+              GapCount := 0;
 
                 // Walk through all 9 cells and find any available territory
                 for i := 1 to 8 do
