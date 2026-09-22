@@ -76,9 +76,6 @@ begin
 
                   if random < L_rep_prob then
                   begin
-                    {To track the actual reproduction probability}
-                    check_Frepr := check_Frepr + 1;
-
                     {Save locations of mother, incase of a breeding event outside established populations}
                     if create_maps then
                     if Lynx^.Current_pop = 0 then

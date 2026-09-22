@@ -540,13 +540,13 @@ begin
                         begin
                         FemalesMap[temp_terrX[f], temp_terrY[f], 0] := Lynx^.Status;
                         FemalesMap[temp_terrX[f], temp_terrY[f], 1] := Lynx^.Age;
-                        FemalesMap[temp_terrX[f], temp_terrY[f], 2] := Round(Lynx^.IC*10000);
+                        if pedigree then FemalesMap[temp_terrX[f], temp_terrY[f], 2] := Round(Lynx^.IC*10000);
                         end
                         else
                         begin
                           MalesMap[temp_terrX[f], temp_terrY[f], 0] := Lynx^.Status;
                           MalesMap[temp_terrX[f], temp_terrY[f], 1] := Lynx^.Age;
-                          MalesMap[temp_terrX[f], temp_terrY[f], 2] := Round(Lynx^.IC*10000);
+                          if pedigree then MalesMap[temp_terrX[f], temp_terrY[f], 2] := Round(Lynx^.IC*10000);
                         end;
                       end;
 

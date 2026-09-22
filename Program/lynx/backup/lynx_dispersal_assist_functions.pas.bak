@@ -482,16 +482,15 @@ var
   GapCount, MaxGap: integer;
  begin
 
-   TCount := 0;
-
-   MaxGap := Round(0.2 * indv_Tsize);
-   GapCount := 0;
-
    {Sex specific Territory size}
    if Lynx^.sex = 'm' then
       indv_Tsize := Round(Tsize * male_T_multiplier)
    else
        indv_Tsize := Tsize;
+
+   TCount := 0;
+   MaxGap := Round(0.2 * indv_Tsize);
+   GapCount := 0;
 
    SetLength(temp_terrX, indv_Tsize);
    SetLength(temp_terrY, indv_Tsize);
@@ -505,9 +504,11 @@ var
      begin
      if (Lynx^.Sex = 'f') or
         ((Lynx^.Sex = 'm') and (FemalesMap[Lynx^.TerritoryX[b], Lynx^.TerritoryY[b], 0] = 3)) then
+        begin
         temp_terrX[TCount] := Lynx^.TerritoryX[b];
         temp_terrY[TCount] := Lynx^.TerritoryY[b];
         Inc(TCount);
+        end;
      end;
    end;
 
