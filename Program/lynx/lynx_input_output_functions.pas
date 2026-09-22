@@ -143,13 +143,13 @@ begin
             begin
             Femalesmap[x, y, 0] := Lynx^.Status;
             Femalesmap[x, y, 1] := Lynx^.Age;
-            Femalesmap[x, y, 2] := Round(Lynx^.IC*10000);
+            if pedigree then Femalesmap[x, y, 2] := Round(Lynx^.IC*10000);
             end;
           if (s = 'm') then
             begin
             Malesmap[x, y, 0] := Lynx^.Status;
             Malesmap[x, y, 1] := Lynx^.Age;
-            Malesmap[x, y, 2] := Round(Lynx^.IC*10000);
+            if pedigree then Malesmap[x, y, 2] := Round(Lynx^.IC*10000);
             end;
         end;
       end;

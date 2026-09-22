@@ -61,6 +61,7 @@
         <EditorIndex Value="3"/>
         <TopLine Value="140"/>
         <CursorPos X="5" Y="152"/>
+        <FoldState Value=" T3kR0*1 Pi8iU03"/>
         <UsageCount Value="108"/>
         <Loaded Value="True"/>
       </Unit>
@@ -83,9 +84,10 @@
       </Unit>
       <Unit>
         <Filename Value="lynx\lynx_input_output_functions.pas"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="146"/>
-        <CursorPos X="53" Y="152"/>
+        <TopLine Value="132"/>
+        <CursorPos X="30" Y="152"/>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
       </Unit>
@@ -107,10 +109,9 @@
       </Unit>
       <Unit>
         <Filename Value="lynx\lynx_dispersal_assist_functions.pas"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="5"/>
         <TopLine Value="607"/>
-        <CursorPos X="25" Y="627"/>
+        <CursorPos X="25" Y="621"/>
         <FoldState Value=" T3T0G113 pn6o30S2 PiYjP0&apos;"/>
         <UsageCount Value="153"/>
         <Loaded Value="True"/>
