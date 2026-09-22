@@ -9,9 +9,11 @@ parallel, and performs summary aggregation.
 """
 
 import argparse
+import json
 import logging
 import random
 import re
+import shutil
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -61,6 +63,16 @@ def get_settings_file(scenario: str, repo_root: Path) -> Path:
     elif scenario in {"ssp245", "ssp585"}:
         return model_input / "future_simulation_settings_IPMcorrected.txt"
     raise ValueError(f"Unsupported scenario: {scenario}")
+
+
+def get_settings_file_IC(scenario: str, repo_root: Path) -> Path:
+    model_input = repo_root / "data" / "model_input"
+    if scenario == "historic":
+        return model_input / "past_calibration_settings_IPMcorrected_IC.txt"
+    elif scenario in {"ssp245", "ssp585"}:
+        return model_input / "future_simulation_settings_IPMcorrected_IC.txt"
+    raise ValueError(f"Unsupported scenario: {scenario}")
+
 
 def read_and_sample_calibration(
     calibration_csv: Path,
@@ -151,6 +163,132 @@ def resolve_map_folder(
     )
 
 
+def ensure_breeding_maps(
+    scenario: str,
+    requirements: List[Tuple[str, int, int]],
+    rabbit_root: Path,
+    maps_root: Path,
+    repo_root: Path,
+    workers: int,
+    logger: logging.Logger,
+) -> None:
+    """Create missing breeding maps for the sampled simulation requirements."""
+    scenario_dir = rabbit_root / f"NC_simulation_Complete_{scenario}"
+    missing = []
+    for replicate, threshold, n_months in requirements:
+        output_dir = (
+            maps_root
+            / scenario
+            / f"threshold_{threshold}_months_{n_months}"
+            / replicate
+        )
+        if output_dir.exists():
+            if not output_dir.is_dir():
+                raise NotADirectoryError(f"Map path is not a directory: {output_dir}")
+            continue
+        missing.append((replicate, threshold, n_months))
+
+    if missing:
+        rscript = shutil.which("Rscript")
+        if rscript is None:
+            raise RuntimeError(
+                "Rscript is required to create missing breeding maps, but it was not found"
+            )
+
+        create_script = repo_root / "scripts" / "r" / "Create_breeding_maps.R"
+        if not create_script.exists():
+            raise FileNotFoundError(f"Breeding-map script not found: {create_script}")
+
+        tasks = [
+            {
+                "rabbit_folder": str(scenario_dir / replicate),
+                "threshold": threshold,
+                "n_months": n_months,
+                "output_dir": str(
+                    maps_root
+                    / scenario
+                    / f"threshold_{threshold}_months_{n_months}"
+                    / replicate
+                ),
+                "asc_dir": str(
+                    Path("asc_temp_dir")
+                    / scenario
+                    / f"threshold_{threshold}_months_{n_months}"
+                    / replicate
+                )
+            }
+            for replicate, threshold, n_months in missing
+        ]
+        script_literal = json.dumps(str(create_script))
+        logger.info("Generating %s missing breeding-map folders with %s worker(s)", len(missing), workers)
+
+        def run_single_task(task: dict) -> str:
+            r_code = (
+                f"source({script_literal}); "
+                "Create_breeding_maps("
+                f"rabbit_folder={json.dumps(task['rabbit_folder'])}, "
+                f"density_threshold={task['threshold']}, "
+                f"n_months={task['n_months']}, "
+                f"output_dir={json.dumps(task['output_dir'])}, "
+                f"asc_dir={json.dumps(task['asc_dir'])})"
+            )
+            result = subprocess.run(
+                [rscript, "-e", r_code],
+                cwd=repo_root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=True,
+            )
+            return result.stdout or ""
+
+        try:
+            with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
+                futures = {executor.submit(run_single_task, task): task for task in tasks}
+                for future in as_completed(futures):
+                    task = futures[future]
+                    try:
+                        output = future.result()
+                        if output:
+                            logger.info(
+                                "Breeding-map generation output for %s/%s:\n%s",
+                                task["threshold"],
+                                task["n_months"],
+                                output.rstrip(),
+                            )
+                    except subprocess.CalledProcessError as exc:
+                        logger.error(
+                            "Breeding-map generation failed for %s/%s:\n%s",
+                            task["threshold"],
+                            task["n_months"],
+                            exc.stdout or "no output",
+                        )
+                        raise RuntimeError(
+                            "Breeding-map generation failed"
+                        ) from exc
+        except RuntimeError:
+            raise
+        except Exception as exc:
+            logger.error("Breeding-map generation failed: %s", exc)
+            raise RuntimeError("Breeding-map generation failed") from exc
+
+    for replicate, threshold, n_months in requirements:
+        output_dir = (
+            maps_root
+            / scenario
+            / f"threshold_{threshold}_months_{n_months}"
+            / replicate
+        )
+        if not output_dir.is_dir():
+            raise FileNotFoundError(f"Breeding-map folder was not created: {output_dir}")
+        if scenario in {"ssp245", "ssp585", "ssp245IC", "ssp585IC"}:
+            year_2100 = output_dir / "Lynx_PreyMap_2100.txt"
+            if not year_2100.exists():
+                raise FileNotFoundError(
+                    f"Future breeding maps must include 2100, but it is missing: {year_2100}"
+                )
+
+
 def create_output_folder(
     runs_root: Path,
     scenario: str,
@@ -232,7 +370,7 @@ def run_summary_script(
     logger: logging.Logger,
 ) -> bool:
     cmd = [
-        "python3",
+        sys.executable,
         str(summary_script),
         str(run_root),
         str(summary_root),
@@ -248,10 +386,15 @@ def run_summary_script(
             text=True,
             check=True,
         )
-        logger.info(result.stdout)
+        summary_output = result.stdout or ""
+        if summary_output:
+            logger.info("Summary script output:\n%s", summary_output.rstrip())
+            for line in summary_output.splitlines():
+                if "Skipping incomplete CSV:" in line or "Skipping unreadable CSV:" in line:
+                    logger.warning("Affected summary input: %s", line.strip())
         return True
     except subprocess.CalledProcessError as exc:
-        logger.error("Summary script failed: %s", exc.stdout)
+        logger.error("Summary script failed: %s", exc.stdout or "no output")
         return False
     except Exception as exc:
         logger.error("Summary script exception: %s", exc)
@@ -262,52 +405,40 @@ def concatenate_population_csvs(
     scenario: str,
     runs_root: Path,
     logger: logging.Logger,
-) -> Tuple[Optional[Path], Optional[Path]]:
+) -> dict[str, Path]:
     scenario_root = runs_root / scenario
     summary_dir = scenario_root / "summary"
     summary_dir.mkdir(parents=True, exist_ok=True)
 
-    pop_files = []
-    biopop_files = []
+    csv_groups: dict[str, list[tuple[str, Path]]] = {}
 
     for sample_dir in sorted(scenario_root.iterdir()):
         if not sample_dir.is_dir() or not sample_dir.name.startswith("sample_"):
             continue
 
-        pop_file = sample_dir / "lynx_pop_size.csv"
-        biopop_file = sample_dir / "lynx_biopop_size.csv"
+        for csv_path in sorted(sample_dir.glob("*.csv")):
+            csv_groups.setdefault(csv_path.name, []).append((sample_dir.name, csv_path))
 
-        if pop_file.exists():
-            pop_files.append((sample_dir.name, pop_file))
-        if biopop_file.exists():
-            biopop_files.append((sample_dir.name, biopop_file))
+    combined_outputs: dict[str, Path] = {}
 
-    pop_output = None
-    biopop_output = None
-
-    if pop_files:
-        pop_dfs = []
-        for source_run, path in pop_files:
+    for csv_name, source_files in sorted(csv_groups.items()):
+        frames = []
+        for source_run, path in source_files:
             df = pd.read_csv(path)
-            df["source_run"] = source_run
-            pop_dfs.append(df)
-        combined = pd.concat(pop_dfs, ignore_index=True)
-        pop_output = summary_dir / "all_lynx_pop_size.csv"
-        combined.to_csv(pop_output, index=False)
-        logger.info("Wrote combined lynx_pop_size.csv: %s", pop_output)
+            if "source_run" not in df.columns:
+                df["source_run"] = source_run
+            frames.append(df)
 
-    if biopop_files:
-        biopop_dfs = []
-        for source_run, path in biopop_files:
-            df = pd.read_csv(path)
-            df["source_run"] = source_run
-            biopop_dfs.append(df)
-        combined = pd.concat(biopop_dfs, ignore_index=True)
-        biopop_output = summary_dir / "all_lynx_biopop_size.csv"
-        combined.to_csv(biopop_output, index=False)
-        logger.info("Wrote combined lynx_biopop_size.csv: %s", biopop_output)
+        if not frames:
+            continue
 
-    return pop_output, biopop_output
+        combined = pd.concat(frames, ignore_index=True)
+        output_path = summary_dir / f"all_{csv_name}"
+        combined.to_csv(output_path, index=False)
+        logger.info("Wrote combined %s: %s", csv_name, output_path)
+        combined_outputs[csv_name] = output_path
+
+    return combined_outputs
 
 
 def parse_args() -> argparse.Namespace:
@@ -320,6 +451,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument(
+        "--inbreeding",
+        type=lambda value: str(value).lower() in {"1", "true", "yes", "y", "on"},
+        default=False,
+        help="Use the inbreeding-aware settings files (supports --inbreeding true/false)",
+    )
 
     parser.add_argument(
         "--calibration-csv",
@@ -376,6 +513,7 @@ def main() -> int:
         args.calibration_csv
         if args.calibration_csv is not None
         else repo_root / "results" / "calibration_summary_RCorrected.csv"
+        #else repo_root / "results" / "calibration_summary.csv"
     )
     rabbit_root = (
         args.rabbit_root
@@ -402,14 +540,23 @@ def main() -> int:
         if args.summary_script is not None
         else repo_root / "scripts" / "python" / "get_summary_maps_from_simulations.py"
     )
+    scenario_label = f"{args.scenario}_IC" if args.inbreeding else args.scenario
 
-    run_log = runs_root / args.scenario / "batch.log"
+    run_log = runs_root / scenario_label / "batch.log"
     run_log.parent.mkdir(parents=True, exist_ok=True)
     logger = setup_logging(run_log)
 
     logger.info("Starting weighted simulation batch")
-    logger.info("scenario=%s samples=%s workers=%s seed=%s overwrite=%s",
-                args.scenario, args.samples, args.workers, args.seed, args.overwrite)
+    logger.info(
+        "scenario=%s scenario_label=%s inbreeding=%s samples=%s workers=%s seed=%s overwrite=%s",
+        args.scenario,
+        scenario_label,
+        args.inbreeding,
+        args.samples,
+        args.workers,
+        args.seed,
+        args.overwrite,
+    )
     logger.info("calibration_csv=%s", calibration_csv)
     logger.info("rabbit_root=%s", rabbit_root)
     logger.info("maps_root=%s", maps_root)
@@ -425,7 +572,13 @@ def main() -> int:
         logger.error("Summary script not found: %s", summary_script)
         return 1
 
-    settings_file = get_settings_file(args.scenario, repo_root)
+    settings_file = (
+        get_settings_file_IC(args.scenario, repo_root)
+        if args.inbreeding
+        else get_settings_file(args.scenario, repo_root)
+    )
+    logger.info("settings_file=%s", settings_file)
+
     if not settings_file.exists():
         logger.error("Settings file not found: %s", settings_file)
         return 1
@@ -434,12 +587,24 @@ def main() -> int:
 
     replicates = get_replicates_for_scenario(args.scenario, rabbit_root, logger)
     random.seed(args.seed)
+    selected = [
+        (random.choice(replicates), int(row["threshold"]), int(row["n_months"]))
+        for _, row in sampled.iterrows()
+    ]
+    ensure_breeding_maps(
+        args.scenario,
+        sorted(set(selected)),
+        rabbit_root,
+        maps_root,
+        repo_root,
+        args.workers,
+        logger,
+    )
 
     jobs: List[SimulationJob] = []
-    for idx, row in sampled.iterrows():
-        replicate = random.choice(replicates)
-        threshold = int(row["threshold"])
-        n_months = int(row["n_months"])
+    for idx, ((replicate, threshold, n_months), (_, row)) in enumerate(
+        zip(selected, sampled.iterrows())
+    ):
         tsize = int(row["Tsize"])
 
         map_folder = resolve_map_folder(
@@ -453,7 +618,7 @@ def main() -> int:
 
         output_folder = create_output_folder(
             runs_root,
-            args.scenario,
+            scenario_label,
             idx,
             replicate,
             threshold,
@@ -498,7 +663,7 @@ def main() -> int:
     logger.info("Completed jobs: %s", len(completed))
     logger.info("Failed jobs: %s", len(failed))
 
-    summary_maps_root = runs_root / args.scenario / "summary_maps"
+    summary_maps_root = runs_root / scenario_label / "summary_maps"
     summary_maps_root.mkdir(parents=True, exist_ok=True)
 
     template = (
@@ -511,17 +676,18 @@ def main() -> int:
         logger.warning("Template not found: %s", template)
 
     if run_summary_script(
-        summary_script, scenario_root, summary_maps_root, template, logger
+        summary_script, runs_root / scenario_label, summary_maps_root, template, logger
     ):
         logger.info("Summary maps saved in %s", summary_maps_root)
     else:
         logger.warning("Summary map generation failed")
 
-    pop_path, biopop_path = concatenate_population_csvs(args.scenario, runs_root, logger)
-    if pop_path:
-        logger.info("Combined pop size CSV: %s", pop_path)
-    if biopop_path:
-        logger.info("Combined biopop size CSV: %s", biopop_path)
+    combined_csvs = concatenate_population_csvs(scenario_label, runs_root, logger)
+    if combined_csvs:
+        for csv_name, output_path in sorted(combined_csvs.items()):
+            logger.info("Combined %s CSV: %s", csv_name, output_path)
+    else:
+        logger.warning("No CSV files found to combine for scenario %s", scenario_label)
 
     logger.info("Weighted simulation batch finished")
     return 0

@@ -13,7 +13,7 @@ source(file.path("scripts", "r", "transform_asc_to_input_maps.R"))
 Create_breeding_maps <- function(rabbit_folder,
                                  density_threshold,
                                  n_months,
-                                 asc_dir = tempfile("breeding_asc_"),
+                                 asc_dir = NULL,
                                  output_dir = NULL,
                                  hab_file = file.path("data", "GIS_maps", "Peninsula_500_template.tif"),
                                  keep_asc = FALSE) {

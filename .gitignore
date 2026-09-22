@@ -4,7 +4,7 @@
 .RData
 .Ruserdata
 *.csv
-
+*__pycache__/
 results/
 QGIS/
 data/

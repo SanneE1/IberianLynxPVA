@@ -38,8 +38,8 @@ if(!dir.exists(model_output)){
 # Set calibration parameter combinations
 #----------------------------------------
 
-Tsize <- seq(from = 8, to = 48, by = 4)
-threshold <- seq(from = 1, to = 13, by = 3)
+Tsize <- seq(from = 14, to = 48, by = 6)
+threshold <- c(1,3,6,9)
 n_months <- c(6,9,12)
 
 cal_df <- expand.grid("threshold" = threshold, "n_months" = n_months)
@@ -74,7 +74,7 @@ b_folder <- Create_breeding_maps(rabbit_folder = r_folder, density_threshold = t
 for(s in Tsize) {
   cat("Tsize: ", s, "\n")
 
-  for(rep in c(1:10)) {  
+  for(rep in c(1:2)) {  
     cat("Rep: ", rep, "\n")
 
     cmd = paste(model_location, settings_file, model_output, s, b_folder)
@@ -101,7 +101,7 @@ for(s in Tsize) {
                          "MCC_500m" = mcc$mcc_500m,
                          "MCC_5km" = mcc$mcc_5km,
                          "MCC_10km" = mcc$mcc_10km,
-                         "Pop_sizes" = popsizes,
+                         "RMSE_sizes" = popsizes,
                          "PopHit_500m" = pophit$PopHit_500m,
                          "PopHit_5km" = pophit$PopHit_5km,
                          "PopHit_10km" = pophit$PopHit_10km,
