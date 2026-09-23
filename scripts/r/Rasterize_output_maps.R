@@ -4,7 +4,7 @@ library(terra)
 csvToRaster <- function(fileName, habitat_raster, return_df = T, plot = F, 
                         save_tiff = F, tiff_name = NA) {
   
-  mat_status <- as.matrix(read.csv(fileName, header = F))
+  mat_status <- as.matrix(read.csv(here::here(fileName), header = F))
   
   df <- terra::rasterize(mat_status, habitat_raster)
   values(df) <- mat_status

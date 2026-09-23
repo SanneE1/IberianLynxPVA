@@ -377,9 +377,6 @@ hist <- predict_PCA_maps(veg_rast = hist_r, elev_rast = dem, road_rast = r_road,
                          pca_path = pca, gam_path = gam, 
                          output_path = file.path(OUT_DIR, "dispersal_historic.tif")) 
 
-writeRaster(hist, filename = file.path(OUT_DIR, "historic_PCA_prediction_dispersal.tif"))
-
-
 
 lucas_fut_245  <- terra::crop(lucas_fut_245, ext(-11, 3.4, 34, 45))
 lucas_fut_245  <- terra::project(lucas_fut_245,  terra::crs(r_template), method = "bilinear")

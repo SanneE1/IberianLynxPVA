@@ -6,25 +6,6 @@ library(rnaturalearth)
 
 source(file.path("scripts", "r", "Rasterize_output_maps.R"))
 
-# sim_size_format <- function(folder) { 
-#   lapply(list.files(file.path("results", "simulations", folder, "all_lynx_biopop/"), full.names = T), 
-#          function(x) {
-#            s <- stringr::str_split(x, pattern = "/")
-#            s <- stringr::str_split(s[[1]][5], pattern = "_")
-#            
-#            a <- read.csv(x)
-#            a$sim_size <- rowSums(a[,-1])
-#            a$Rsim <- as.integer(s[[1]][2])
-#            a$Tsize <- as.integer(s[[1]][3])
-#            a$threshold <- as.integer(s[[1]][4])
-#            a$months <- as.integer(s[[1]][5])
-#            a$rep  <- as.integer(s[[1]][6])
-#            return(a)
-#          }) %>%
-#     bind_rows() %>%
-#     filter(year != 2023)
-# }
-
 hab_rast = rast(file.path("data", "GIS_maps", "Peninsula_500_template.tif"))
 world <- ne_countries(scale = "medium", returnclass = "sf")
 world_cropped <- world %>%
@@ -33,105 +14,44 @@ world_cropped <- world %>%
 
 # Breeding habitat ---------------------------------------------------------------------------------------------------
 
-bh22mean <- csvToRaster("results/rabbit_simulation_summary_maps/Lynx_BreedingMap_2022_mean.csv", hab_rast)
-bh22lower <- csvToRaster("results/rabbit_simulation_summary_maps/Lynx_BreedingMap_2022_lower_ci.csv", hab_rast)
-bh22upper <- csvToRaster("results/rabbit_simulation_summary_maps/Lynx_BreedingMap_2022_upper_ci.csv", hab_rast)
+# bh22mean <- csvToRaster("results/rabbit_simulation_summary_maps/Lynx_BreedingMap_2022_mean.csv", hab_rast)
+# bh22lower <- csvToRaster("results/rabbit_simulation_summary_maps/Lynx_BreedingMap_2022_lower_ci.csv", hab_rast)
+# bh22upper <- csvToRaster("results/rabbit_simulation_summary_maps/Lynx_BreedingMap_2022_upper_ci.csv", hab_rast)
 
 # Historic simulations -----------------------------------------------------------------------------------------------
 
-
-folders <- c(file.path("results", "simulations", "historic_06.15"))
+occ_map_2022 <- csvToRaster("results/simulations/simulation_runs/historic/summary_maps/FemalesMap_status_yr_2022_occupancy_prob.csv", 
+                            hab_rast)
+occ_map_2022 <- ifel(occ_map_2022 < 0.01, NA, occ_map_2022)
 
 # Spatial distribution
-for(f in folders){
-  obs_22 <- vect("data/GIS_maps/presence_vectors/2022.shp")
-  obs_22 <- project(obs_22, crs(hab_rast))
+obs_22 <- vect("data/GIS_maps/presence_vectors/2022.shp")
+obs_22 <- project(obs_22, crs(hab_rast))
+ext_22 <- ext(obs_22)
+
+ggplot() +
+  geom_sf(data = world_cropped, fill = "grey90", color = "white", linewidth = 0.3) +
+  geom_spatraster(data = occ_map_2022) +
+  geom_spatvector(data = aggregate(obs_22), fill = "transparent", color = "red") +
+  scale_fill_viridis_c(na.value = NA)+
+  theme_light() +
+  coord_sf(xlim = c(ext_22[1], ext_22[2]), 
+                  ylim = c(ext_22[3], ext_22[4]))
   
-  map22_file = file.path(f, "summary_maps", "FemalesMap_status_yr_2022_occupancy_prob.csv")
-  map22 <- csvToRaster(map22_file, hab_rast)
-  map22 <- ifel(map22 == 0, NA, map22)
-  
-  # p <- 
-    ggplot() +
-    geom_sf(data = world_cropped, fill = "grey90", color = "white", linewidth = 0.3) +
-    geom_spatraster(data = map22) +
-    geom_spatvector(data = aggregate(obs_22), fill = "transparent", color = "grey30") +
-    scale_fill_gradientn(colours = c("transparent", "yellow", "red"),
-                         values = c(0, 0.0001, 1),
-                         limits = c(0, 1),
-                         na.value = NA) +
-    theme_light()
-  
-  print(p)
-  ggsave(paste0(f, "_distribution_2022.png"), p)
-  
-}
 
 
 # Population sizes
 size_obs <- read.csv("data/original_data/Population_sizes_IUCN.csv")
 size_obs$obs_size <- size_obs$Vale.do.Guadiana + size_obs$Doñana + size_obs$Matachel + size_obs$Sierra.Morena + size_obs$Toledo.Mountains
 
-size_simO <- sim_size_format("Historical_simulations")
-size_simR <- sim_size_format("Historical_simulations_rate")
-size_simOC <- sim_size_format("Historical_simulations_CORINE")
-size_simRC <- sim_size_format("Historical_simulations_rate_CORINE")
+size_sim <- read.csv("results/simulations/simulation_runs/historic/summary/all_lynx_biopop_size.csv")
+size_sim$tot_size <- rowSums(size_sim[,c(2:7)])
+size_sim <- size_sim %>% filter(year < 2025)
 
+ggplot() +
+  geom_line(data = size_sim, aes(x = year, y = tot_size, group = source_run, colour = "darkblue")) +
+  geom_line(data = size_obs, aes(x = Year, y = obs_size), colour = "grey40", linewidth = 2) 
 
-p_sizes <- ggplot() +
-  geom_line(data = size_simO, aes(x = year, y = sim_size, group = interaction(Rsim, Tsize, threshold, months, rep), colour = "Original_LUCAS")) +
-  geom_line(data = size_simR, aes(x = year, y = sim_size, group = interaction(Rsim, Tsize, threshold, months, rep), colour = "rate_LUCAS")) +
-  geom_line(data = size_simOC, aes(x = year, y = sim_size, group = interaction(Rsim, Tsize, threshold, months, rep), colour = "Original_CORINE")) +
-  geom_line(data = size_simRC, aes(x = year, y = sim_size, group = interaction(Rsim, Tsize, threshold, months, rep), colour = "rate_CORINE")) +
-  geom_line(data = size_obs, aes(x = Year, y = obs_size), colour = "grey40", size = 2) 
-
-ggsave("results/population_sizes_calibration_comparisons.png", p_sizes, width = 5.5, height = 6.1)
-
-
-# Future simulations ----------------------------------------------------------------------------------------------------------------------------------------
-
-folders <- c("Future_simulations", "Future_simulations_rate", "Future_simulations_rate_CORINE")
-
-# Spatial distribution
-for(f in folders){
-  obs_22 <- vect("data/GIS_maps/presence_vectors/2022.shp")
-  obs_22 <- project(obs_22, crs(hab_rast))
-  
-  map22_file = file.path("results", "simulations", f, "FemalesMap_status_yr_2050_presence_prob.csv")
-  map22 <- csvToRaster(map22_file, hab_rast)
-  map22 <- ifel(map22 == 0, NA, map22)
-  
-  p <- ggplot() +
-    geom_sf(data = world_cropped, fill = "grey90", color = "grey30", linewidth = 0.3) +
-    geom_spatvector(data = obs_22, fill = "grey100", color = "grey100") +
-    geom_spatraster(data = map22) +
-    scale_fill_gradientn(colours = c("transparent", "blue", "red"),
-                         values = c(0, 0.0001, 1),
-                         limits = c(0, 1),
-                         na.value = NA)
-  print(p + ggtitle(f))
-  
-  ggsave(paste0("results/", f, "_distribution_2050.png"), p)
-  
-}
-
-
-# size_simO <- sim_size_format("Future_simulations")
-# size_simR <- sim_size_format("Future_simulations_rate")
-size_simRC <- sim_size_format("Future_simulations_rate_CORINE")
-size_simRC$Rsim <- size_simRC$threshold 
-size_simRC$rep <- size_simRC$months
-size_simRC$threshold <- 1
-size_simRC$months <- as.integer(gsub("61", "", size_simRC$Tsize))
-size_simRC$Tsize <- 6
-
-size_simRC <- size_simRC %>% filter(year < 2101)
-
-future_sizes_plot <- ggplot(size_simRC) + 
-  geom_line(aes(x = year, y = sim_size, group = interaction(Rsim, Tsize, threshold, months, rep)), alpha = 0.5)
-
-ggsave("results/total_size_graph_Future_rate_CORINE.png", future_sizes_plot,
-       width = 6.5, height = 4.3)
 
 
 
