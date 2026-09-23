@@ -85,10 +85,10 @@ for(s in Tsize) {
       message("Command failed on iteration ", s, "in rep ", rep, " with exit code ", exit_code)
     } else { 
     
-    mcc <- mean_MCC(obs_dir = obs_dir, sim_data = model_output, hab_rast = file.path("data", "GIS_maps", "Lynx_HabitatMap_LUCAS_2015.asc"))
-    
+    mcc <- mean_MCC(obs_dir = obs_dir, sim_data = model_output, hab_rast = file.path("data", "GIS_maps", "Peninsula_500_template.tif"))
+
     pophit <- mean_pop_hit(obs_dir = obs_dir, sim_data = model_output,
-                           hab_rast = file.path("data", "GIS_maps", "Lynx_HabitatMap_LUCAS_2015.asc"))
+                           hab_rast = file.path("data", "GIS_maps", "Peninsula_500_template.tif"))
     
     popsizes <- compare_pop_sizes(size_file = file.path("data", "original_data", "2025.08.06_LynxConnectWebsiteCensusNumber.csv"), 
                                   sim_data = model_output)

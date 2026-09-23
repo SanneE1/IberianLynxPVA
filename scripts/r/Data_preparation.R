@@ -2,6 +2,9 @@ library(raster)
 library(ncdf4)
 library(terra)
 library(dplyr)
+library(here)
+
+source("scripts/r/transform_asc_to_input_maps.R")
 
 # paths
 corine_raster_path <- "data/original_data/U2018_CLC2018_V2020_20u1.tif"  # Replace with the path to your CORINE raster
@@ -30,26 +33,54 @@ writeRaster(template, "data/GIS_maps/Peninsula_500_template.tif",
 
 
 # --------------------------------------
-# DISPERSAL HABITAT MAP
+# HABITAT MAP
 # --------------------------------------
 
-# Use dispersal resistance surface from Cisneros-araujo to
-# 1) projected the dispersal resistance into the future using landcover change
-# 2) classify all dispersal resistance surfaces into the 3 habitat categories 
-#    required for the IBM 
-source("scripts/r/PCA_dispersal.R")
+# Reclassification table --- Based on Revilla 2015 (both options)
+reclass_Rev1 <- as.matrix(data.frame(
+  old = c(1:44, 48),
+  new = c(rep(0,9), rep(1,13),2,2,2,1,2,2,2,rep(1,4),0,0,1, rep(0,9))
+))
+
+reclass_Rev2 <- as.matrix(data.frame(
+  old = c(1:44, 48),
+  new = c(rep(0,9), rep(1,12),2,2,2,2,1,2,2,2,rep(1,4),0,0,1, rep(0,9))
+))
+
+# Perform the reclassification
+# Convert the reclass_table into a matrix for terra::classify
+reclas_peninsula1 <- classify(peninsula, reclass_Rev1)
+reclas_peninsula2 <- classify(peninsula, reclass_Rev2)
+
+# Resample instead of project
+reproj_peninsula1 <- resample(reclas_peninsula1, peninsula_template, method = "mode")
+reproj_peninsula2 <- resample(reclas_peninsula2, peninsula_template, method = "mode")
+
+# Save raster maps as asc (easiest to change into format needed for pascal program)
+writeRaster(reproj_peninsula1, file.path(output_folder, "Lynx_HabitatMap_500_Peninsula_Revilla_2015_1.asc"), datatype = "INT2S", overwrite = TRUE)
+writeRaster(reproj_peninsula2, file.path(output_folder, "Lynx_HabitatMap_500_Peninsula_Revilla_2015_2.asc"), datatype = "INT2S", overwrite = TRUE)
 
 # --------------------------------------
 # BREEDING HABITAT
 # --------------------------------------
 
+# Reclassification table --- Based on Fordham 2013
+reclass_Ford <- as.matrix(data.frame(
+  old = c(1:44, 48),
+  new = c(rep(0,27), 1, 1, rep(0,16))
+))
 
-# Use habitat selection (while in territory) surface from Cisneros-araujo to
-# 1) projected the habitat selection into the future using landcover change
-# 2) classify all surfaces into the 3 habitat categories required for the IBM 
-source("scripts/r/PCA_habitat.R")
+# Perform the reclassification
+# Convert the reclass_table into a matrix for terra::classify
+reclas_peninsulaF <- classify(peninsula, reclass_Ford)
 
-# Format map(s) for additional breeding habitat requirements 
+# Resize to 500x500m raster size
+reproj_peninsulaF <- resample(reclas_peninsulaF, peninsula_template, method = "mode")
+
+# Save raster maps as asc (easiest to change into format needed for pascal program)
+writeRaster(reproj_peninsulaF, file.path(output_folder, "Lynx_BreedingHabitat_500_Peninsula_Fordham_2013.asc"), datatype = "INT2S", overwrite = TRUE)
+
+# Format map(s) for additional breeding habitat requirements
 # 1) rivers
 source("scripts/r/Format_breeding_habitat.R")
 
@@ -99,6 +130,17 @@ man_pop <- project(man_pop, crs(peninsula_template))
 man_pop <- buffer(man_pop, width = 1000)  # your buffer distance in map units
 man_pop <- terra::rasterize(man_pop, peninsula_template, field = "population", background = 0)
 
+# --------------------------------------
+# CONVERT MAPS TO MODEL INPUT FORMAT
+# --------------------------------------
+
+for (m in c("Lynx_HabitatMap_500_Peninsula_Revilla_2015_1",
+            "Lynx_HabitatMap_500_Peninsula_Revilla_2015_2",
+            "Lynx_BreedingHabitat_500_Peninsula_Fordham_2013",
+            "Lynx_populations_2022_buffered")) {
+  transform_asc_file(input_path = file.path(output_folder, paste0(m, ".asc")),
+                     output_path = file.path("data", "model_input", "maps", paste0(m, ".txt")))
+}
 
 
 
@@ -151,7 +193,7 @@ for (i in seq_along(merged_obs)) {
   
   # if there's no overlap at all, intersect() can return 0 rows -- guard for that
   if (nrow(inter) == 0) {
-    warning("No overlap found for: ", f)
+    warning("No overlap found for: ", names(merged_obs)[i])
     next
   }
   
