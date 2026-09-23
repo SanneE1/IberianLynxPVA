@@ -93,6 +93,15 @@ writeVector(result,  file.path(output_folder, "Lynx_populations_2022_buffered_ve
 writeRaster(pops_rast, file.path(output_folder, "Lynx_populations_2022_buffered.asc"), datatype = "INT2S", overwrite = TRUE)
 writeRaster(pops_rast, file.path(output_folder, "Lynx_populations_2022_buffered.tif"), datatype = "INT2S", overwrite = TRUE)
 
+# Do the same for the larger, manually drawn polygons around the biological populations:
+man_pop <- vect(here("data/GIS_maps/manual_populations_drawn.shp"))
+man_pop <- project(man_pop, crs(peninsula_template))
+man_pop <- buffer(man_pop, width = 1000)  # your buffer distance in map units
+man_pop <- terra::rasterize(man_pop, peninsula_template, field = "population", background = 0)
+
+
+
+
 # ----------------------------------------------------------------------------
 # POPULATION MAPS
 # ----------------------------------------------------------------------------
@@ -254,12 +263,6 @@ write.table(reint_df, file = "data/model_input/Lynx_reintroductions.txt", sep = 
 
 
 # View(as.data.frame(result) %>% select(subpop_numeric))
-
-
-
-# ----------------------------------------------------------------------------
-# Change ASC files to txt model input
-# ----------------------------------------------------------------------------
 
 
 
