@@ -1,4 +1,13 @@
-compare_pop_sizes <- function(size_file, sim_data) {
+#----------------------------------------
+# Settings (defaults of compare_pop_sizes())
+#----------------------------------------
+# Only used if the object does not exist yet.
+
+# Years compared with the census. The last year gets weight 4, the year before
+# weight 2 and earlier years weight 1.
+if (!exists("census_years")) census_years <- 2021:2024
+
+compare_pop_sizes <- function(size_file, sim_data, years = census_years) {
   
   obs_sizes <- read.csv(size_file)
   
@@ -14,7 +23,7 @@ compare_pop_sizes <- function(size_file, sim_data) {
   # pops_lookup <- read.csv(file.path("data", "pop_id_lookup.csv"))
   
   df <- left_join(a, b, by = "Year") %>%
-  filter(Year >= 2021, Year <= 2024) %>%
+  filter(Year %in% years) %>%
   mutate(
     error = N_sim - N_obs,
     year_weight = if_else(Year == max(Year), 4,

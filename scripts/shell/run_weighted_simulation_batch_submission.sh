@@ -29,6 +29,15 @@ SEED="${4:-42}"
 IC="${5:-false}"
 OVERWRITE="${6:-false}"
 
+# Settings: used unless already set as environment variables (scripts/Run_pipeline.R sets them)
+CALIBRATION_CSV="${CALIBRATION_CSV:-results/calibration_summary_RCorrected.csv}"
+SIM_SETTINGS_FILE="${SIM_SETTINGS_FILE:-}"   # empty = default settings file for the scenario (see run_weighted_simulation_batch.py)
+RABBIT_ROOT="${RABBIT_ROOT:-data/Rabbit_output}"
+MAPS_ROOT="${MAPS_ROOT:-data/model_input/maps}"
+RUNS_ROOT="${RUNS_ROOT:-results/simulation_runs}"
+MODEL_EXE="${MODEL_EXE:-Program/Executables/Run_model_debug}"
+TEMPLATE="${TEMPLATE:-data/GIS_maps/Peninsula_500_template.tif}"
+
 if [ -z "$SCENARIO" ] || [ -z "$SAMPLES" ]; then
   echo "Usage: sbatch $0 <scenario> <samples> [workers] [seed] [inbreeding] [overwrite]"
   exit 1
@@ -39,11 +48,22 @@ if [ "$OVERWRITE" = "true" ] || [ "$OVERWRITE" = "1" ]; then
   OVERWRITE_FLAG="--overwrite"
 fi
 
+SETTINGS_OPTION=()
+if [ -n "$SIM_SETTINGS_FILE" ]; then
+  SETTINGS_OPTION=(--settings-file "$SIM_SETTINGS_FILE")
+fi
+
 python3 scripts/python/run_weighted_simulation_batch.py \
   "$SCENARIO" \
   "$SAMPLES" \
   --workers "$WORKERS" \
   --seed "$SEED" \
-  --calibration-csv "results/calibration_summary_RCorrected.csv" \
+  --calibration-csv "$CALIBRATION_CSV" \
+  --rabbit-root "$RABBIT_ROOT" \
+  --maps-root "$MAPS_ROOT" \
+  --runs-root "$RUNS_ROOT" \
+  --executable "$MODEL_EXE" \
+  --template "$TEMPLATE" \
   --inbreeding "$IC" \
+  "${SETTINGS_OPTION[@]}" \
   $OVERWRITE_FLAG

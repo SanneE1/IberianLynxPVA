@@ -10,19 +10,36 @@ library(lubridate)
 source(file.path("scripts", "r", "Rasterize_output_maps.R"))
 source(file.path("scripts", "r", "transform_asc_to_input_maps.R"))
 
+#----------------------------------------
+# Settings (defaults of Create_breeding_maps())
+#----------------------------------------
+# Only used if the object does not exist yet. Settings saved by
+# scripts/Run_pipeline.R (path in the environment variable LYNX_PIPELINE_SETTINGS)
+# are loaded first, so they also apply when the simulation step calls this script.
+
+pipeline_settings <- Sys.getenv("LYNX_PIPELINE_SETTINGS")
+if (nzchar(pipeline_settings) && file.exists(pipeline_settings)) {
+  list2env(readRDS(pipeline_settings), envir = environment())
+}
+
+if (!exists("template_file"))  template_file  <- file.path("data", "GIS_maps", "Peninsula_500_template.tif")
+if (!exists("model_maps_dir")) model_maps_dir <- file.path("data", "model_input", "maps")   # output when no output_dir is given
+# A lynx year runs from June to May: months before this one belong to the same year
+if (!exists("lynx_year_start_month")) lynx_year_start_month <- 6
+
 Create_breeding_maps <- function(rabbit_folder,
                                  density_threshold,
                                  n_months,
                                  asc_dir = NULL,
                                  output_dir = NULL,
-                                 hab_file = file.path("data", "GIS_maps", "Peninsula_500_template.tif"),
+                                 hab_file = template_file,
                                  keep_asc = FALSE) {
 
   if (is.null(output_dir)) {
     if (missing(asc_dir) || nchar(asc_dir) == 0) {
       stop("Either asc_dir or output_dir must be provided")
     }
-    output_dir <- file.path("data", "model_input", "maps", basename(asc_dir))
+    output_dir <- file.path(model_maps_dir, basename(asc_dir))
   }
 
   if (dir.exists(output_dir)) {
@@ -40,7 +57,7 @@ Create_breeding_maps <- function(rabbit_folder,
   dates <- stringr::str_extract(Rdens_files, pattern = "\\d{4}_\\d{1,2}")
   dates <- as.Date(paste0(dates, "_1"), format = "%Y_%m_%d")
 
-  yrs_model <- ifelse(month(dates) < 6, year(dates), year(dates) + 1)
+  yrs_model <- ifelse(month(dates) < lynx_year_start_month, year(dates), year(dates) + 1)
 
   for (y in unique(yrs_model)) {
     if (length(which(yrs_model == y)) != 12) {

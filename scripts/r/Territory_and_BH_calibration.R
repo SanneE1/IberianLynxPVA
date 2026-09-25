@@ -1,25 +1,54 @@
 library(dplyr)
 
+#----------------------------------------
+# Settings
+#----------------------------------------
+# Run-specific arguments come from the command line (scripts/shell/calibration_submission.sh):
+#   Rscript scripts/r/Territory_and_BH_calibration.R <rabbit_folder> <settings_file>
+#           <model_output> <model_executable> <obs_dir> <parameter_row>
+# Without arguments (e.g. when testing interactively), existing objects with
+# these names are used, otherwise the defaults below. The same applies to all
+# other settings.
+
+# Settings saved by scripts/Run_pipeline.R (path in the environment variable
+# LYNX_PIPELINE_SETTINGS) are loaded first and replace the defaults below.
+pipeline_settings <- Sys.getenv("LYNX_PIPELINE_SETTINGS")
+if (nzchar(pipeline_settings) && file.exists(pipeline_settings)) {
+  list2env(readRDS(pipeline_settings), envir = environment())
+}
+
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args) >= 6) {
+  r_folder       <- args[1]
+  settings_file  <- args[2]
+  model_output   <- args[3]
+  model_location <- args[4]
+  obs_dir        <- args[5]
+  param_row      <- as.integer(args[6])
+}
+
+if (!exists("r_folder"))       r_folder       <- "data/Rabbit_output/NC_simulation_Complete_historic/line12/"
+if (!exists("settings_file"))  settings_file  <- "data/model_input/past_calibration_settings_IPMcorrected.txt"
+if (!exists("model_output"))   model_output   <- "cal_test"
+if (!exists("model_location")) model_location <- "Program/Executables/Run_model_debug"
+if (!exists("obs_dir"))        obs_dir        <- "data/GIS_maps/presence_vectors/"
+if (!exists("param_row"))      param_row      <- 1   # row of the threshold x n_months grid (= SLURM array task)
+
+# Calibration grid. The number of threshold x n_months combinations (now 12)
+# must match #SBATCH --array in scripts/shell/calibration_submission.sh
+if (!exists("tsize_values"))     tsize_values     <- seq(from = 14, to = 48, by = 6)   # territory size (cells)
+if (!exists("threshold_values")) threshold_values <- c(1, 3, 6, 9)                     # rabbit density threshold
+if (!exists("n_months_values"))  n_months_values  <- c(6, 9, 12)                       # months at or above the threshold
+if (!exists("n_reps"))           n_reps           <- 2                                 # model runs per combination
+
+# Scoring and output
+if (!exists("template_file"))           template_file           <- "data/GIS_maps/Peninsula_500_template.tif"
+if (!exists("census_csv"))              census_csv              <- "data/original_data/2025.08.06_LynxConnectWebsiteCensusNumber.csv"
+if (!exists("calibration_results_dir")) calibration_results_dir <- "results/calibration"
+
 source(file.path("scripts", "r", "Create_breeding_maps.R"))
 source(file.path("scripts", "r", "Presence_maps_accuracy.R"))
 source(file.path("scripts", "r", "pop_sizes_accuracy.R"))
-
-# r_folder = "data/Rabbit_output/"
-# settings_file = "data/model_input/past_calibration_settings.txt"
-# model_location = "Program/Executables/Run_model_debug.exe"
-# model_output = "cal_test"
-# obs_dir = "data/GIS_maps/presence_vectors/"
-# r = 1
-# rep = 1
-
-args = commandArgs(trailingOnly = T)
-
-r_folder = args[1]
-settings_file = args[2]
-model_output = args[3]
-model_location = args[4]
-obs_dir = args[5]
-r = as.integer(args[6])
 
 cat("Arguments received: \n",
     "Rabbit folder: ", r_folder, "\n",
@@ -27,7 +56,7 @@ cat("Arguments received: \n",
     "Model output folder: ", model_output, "\n",
     "Model executable location: ", model_location, "\n",
     "Observations directory: ", obs_dir, "\n",
-    "Calibration parameter row: ", r, "\n")
+    "Calibration parameter row: ", param_row, "\n")
 
 
 if(!dir.exists(model_output)){
@@ -38,11 +67,7 @@ if(!dir.exists(model_output)){
 # Set calibration parameter combinations
 #----------------------------------------
 
-Tsize <- seq(from = 14, to = 48, by = 6)
-threshold <- c(1,3,6,9)
-n_months <- c(6,9,12)
-
-cal_df <- expand.grid("threshold" = threshold, "n_months" = n_months)
+cal_df <- expand.grid("threshold" = threshold_values, "n_months" = n_months_values)
 
 result_df <- data.frame("Tsize" = c(),
                         "threshold" = c(),
@@ -57,8 +82,8 @@ result_df <- data.frame("Tsize" = c(),
 # Run calibration
 #----------------------------------------
 
-t = cal_df$threshold[r]
-n = cal_df$n_months[r]
+t = cal_df$threshold[param_row]
+n = cal_df$n_months[param_row]
 
 asc_dir = paste(basename(r_folder), t, n, sep = "_")
 
@@ -71,10 +96,10 @@ cat("Running calibration with parameters: \n",
 
 b_folder <- Create_breeding_maps(rabbit_folder = r_folder, density_threshold = t, n_months = n, asc_dir = asc_dir)
 
-for(s in Tsize) {
+for(s in tsize_values) {
   cat("Tsize: ", s, "\n")
 
-  for(rep in c(1:2)) {  
+  for(rep in seq_len(n_reps)) {  
     cat("Rep: ", rep, "\n")
 
     cmd = paste(model_location, settings_file, model_output, s, b_folder)
@@ -85,12 +110,12 @@ for(s in Tsize) {
       message("Command failed on iteration ", s, "in rep ", rep, " with exit code ", exit_code)
     } else { 
     
-    mcc <- mean_MCC(obs_dir = obs_dir, sim_data = model_output, hab_rast = file.path("data", "GIS_maps", "Peninsula_500_template.tif"))
+    mcc <- mean_MCC(obs_dir = obs_dir, sim_data = model_output, hab_rast = template_file)
 
     pophit <- mean_pop_hit(obs_dir = obs_dir, sim_data = model_output,
-                           hab_rast = file.path("data", "GIS_maps", "Peninsula_500_template.tif"))
+                           hab_rast = template_file)
     
-    popsizes <- compare_pop_sizes(size_file = file.path("data", "original_data", "2025.08.06_LynxConnectWebsiteCensusNumber.csv"), 
+    popsizes <- compare_pop_sizes(size_file = census_csv, 
                                   sim_data = model_output)
     
     result <- data.frame("Tsize" = s,
@@ -116,7 +141,7 @@ for(s in Tsize) {
   }
 }
 
-file_output = file.path("results", "calibration", paste0(paste(model_output, t,n, sep = "_"), ".csv"))
+file_output = file.path(calibration_results_dir, paste0(paste(model_output, t,n, sep = "_"), ".csv"))
 
 if(!dir.exists(dirname(file_output))){
   dir.create(dirname(file_output), recursive = T)

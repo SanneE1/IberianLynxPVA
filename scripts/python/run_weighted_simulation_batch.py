@@ -25,6 +25,37 @@ import numpy as np
 import pandas as pd
 
 
+# -----------------------------------------------------------------------------
+# Settings
+# -----------------------------------------------------------------------------
+# Defaults, relative to the repository root. Paths marked (option) can be
+# overridden on the command line (see parse_args), e.g. --settings-file.
+
+# Model settings files per scenario (option: --settings-file)
+SETTINGS_FILES = {
+    "historic": "data/model_input/past_calibration_settings_IPMcorrected.txt",
+    "future": "data/model_input/future_simulation_settings_IPMcorrected.txt",
+}
+# Settings files used with --inbreeding true
+SETTINGS_FILES_IC = {
+    "historic": "data/model_input/past_calibration_settings_IPMcorrected_IC.txt",
+    "future": "data/model_input/future_simulation_settings_IPMcorrected_IC.txt",
+}
+FUTURE_SCENARIOS = ["ssp245", "ssp585"]
+FUTURE_LAST_YEAR = 2100  # future breeding maps must include this year
+
+DEFAULT_CALIBRATION_CSV = "results/calibration_summary_RCorrected.csv"      # option: --calibration-csv
+DEFAULT_RABBIT_ROOT = "data/Rabbit_output"                                  # option: --rabbit-root
+RABBIT_SCENARIO_PREFIX = "NC_simulation_Complete_"                          # rabbit folder = <prefix><scenario>
+DEFAULT_MAPS_ROOT = "data/model_input/maps"                                 # option: --maps-root
+DEFAULT_RUNS_ROOT = "results/simulation_runs"                               # option: --runs-root
+DEFAULT_EXECUTABLE = "Program/Executables/Run_model_debug"                  # option: --executable
+DEFAULT_SUMMARY_SCRIPT = "scripts/python/get_summary_maps_from_simulations.py"  # option: --summary-script
+DEFAULT_TEMPLATE = "data/GIS_maps/Peninsula_500_template.tif"               # option: --template
+BREEDING_MAP_SCRIPT = "scripts/r/Create_breeding_maps.R"
+ASC_TEMP_DIR = "asc_temp_dir"  # temporary .asc breeding maps, removed after conversion
+
+
 def setup_logging(log_file: Optional[Path] = None) -> logging.Logger:
     logger = logging.getLogger("run_weighted_simulation_batch")
     logger.setLevel(logging.DEBUG)
@@ -48,29 +79,12 @@ def setup_logging(log_file: Optional[Path] = None) -> logging.Logger:
     return logger
 
 
-#def get_settings_file(scenario: str, repo_root: Path) -> Path:
-#    model_input = repo_root / "data" / "model_input"
-#    if scenario == "historic":
-#        return model_input / "past_calibration_settings_IPM.txt"
-#    elif scenario in {"ssp245", "ssp585"}:
-#        return model_input / "future_simulation_settings_IPM.txt"
-#    raise ValueError(f"Unsupported scenario: {scenario}")
-
-def get_settings_file(scenario: str, repo_root: Path) -> Path:
-    model_input = repo_root / "data" / "model_input"
+def get_settings_file(scenario: str, repo_root: Path, inbreeding: bool = False) -> Path:
+    files = SETTINGS_FILES_IC if inbreeding else SETTINGS_FILES
     if scenario == "historic":
-        return model_input / "past_calibration_settings_IPMcorrected.txt"
-    elif scenario in {"ssp245", "ssp585"}:
-        return model_input / "future_simulation_settings_IPMcorrected.txt"
-    raise ValueError(f"Unsupported scenario: {scenario}")
-
-
-def get_settings_file_IC(scenario: str, repo_root: Path) -> Path:
-    model_input = repo_root / "data" / "model_input"
-    if scenario == "historic":
-        return model_input / "past_calibration_settings_IPMcorrected_IC.txt"
-    elif scenario in {"ssp245", "ssp585"}:
-        return model_input / "future_simulation_settings_IPMcorrected_IC.txt"
+        return repo_root / files["historic"]
+    elif scenario in FUTURE_SCENARIOS:
+        return repo_root / files["future"]
     raise ValueError(f"Unsupported scenario: {scenario}")
 
 
@@ -111,7 +125,7 @@ def read_and_sample_calibration(
 
 
 def get_replicates_for_scenario(scenario: str, rabbit_root: Path, logger: logging.Logger) -> List[str]:
-    scenario_dir = rabbit_root / f"NC_simulation_Complete_{scenario}"
+    scenario_dir = rabbit_root / f"{RABBIT_SCENARIO_PREFIX}{scenario}"
     if not scenario_dir.exists():
         raise FileNotFoundError(f"Rabbit scenario root does not exist: {scenario_dir}")
 
@@ -173,7 +187,7 @@ def ensure_breeding_maps(
     logger: logging.Logger,
 ) -> None:
     """Create missing breeding maps for the sampled simulation requirements."""
-    scenario_dir = rabbit_root / f"NC_simulation_Complete_{scenario}"
+    scenario_dir = rabbit_root / f"{RABBIT_SCENARIO_PREFIX}{scenario}"
     missing = []
     for replicate, threshold, n_months in requirements:
         output_dir = (
@@ -195,7 +209,7 @@ def ensure_breeding_maps(
                 "Rscript is required to create missing breeding maps, but it was not found"
             )
 
-        create_script = repo_root / "scripts" / "r" / "Create_breeding_maps.R"
+        create_script = repo_root / BREEDING_MAP_SCRIPT
         if not create_script.exists():
             raise FileNotFoundError(f"Breeding-map script not found: {create_script}")
 
@@ -211,7 +225,7 @@ def ensure_breeding_maps(
                     / replicate
                 ),
                 "asc_dir": str(
-                    Path("asc_temp_dir")
+                    Path(ASC_TEMP_DIR)
                     / scenario
                     / f"threshold_{threshold}_months_{n_months}"
                     / replicate
@@ -281,11 +295,11 @@ def ensure_breeding_maps(
         )
         if not output_dir.is_dir():
             raise FileNotFoundError(f"Breeding-map folder was not created: {output_dir}")
-        if scenario in {"ssp245", "ssp585", "ssp245IC", "ssp585IC"}:
-            year_2100 = output_dir / "Lynx_PreyMap_2100.txt"
+        if scenario in FUTURE_SCENARIOS:
+            year_2100 = output_dir / f"Lynx_PreyMap_{FUTURE_LAST_YEAR}.txt"
             if not year_2100.exists():
                 raise FileNotFoundError(
-                    f"Future breeding maps must include 2100, but it is missing: {year_2100}"
+                    f"Future breeding maps must include {FUTURE_LAST_YEAR}, but it is missing: {year_2100}"
                 )
 
 
@@ -446,7 +460,7 @@ def parse_args() -> argparse.Namespace:
         description="Weighted simulation batch workflow for Iberian Lynx PVA"
     )
 
-    parser.add_argument("scenario", choices=["historic", "ssp245", "ssp585"])
+    parser.add_argument("scenario", choices=["historic"] + FUTURE_SCENARIOS)
     parser.add_argument("samples", type=int)
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--seed", type=int, default=42)
@@ -458,6 +472,12 @@ def parse_args() -> argparse.Namespace:
         help="Use the inbreeding-aware settings files (supports --inbreeding true/false)",
     )
 
+    parser.add_argument(
+        "--settings-file",
+        type=Path,
+        default=None,
+        help="Model settings file (default: SETTINGS_FILES / SETTINGS_FILES_IC for the scenario)",
+    )
     parser.add_argument(
         "--calibration-csv",
         type=Path,
@@ -512,33 +532,32 @@ def main() -> int:
     calibration_csv = (
         args.calibration_csv
         if args.calibration_csv is not None
-        else repo_root / "results" / "calibration_summary_RCorrected.csv"
-        #else repo_root / "results" / "calibration_summary.csv"
+        else repo_root / DEFAULT_CALIBRATION_CSV
     )
     rabbit_root = (
         args.rabbit_root
         if args.rabbit_root is not None
-        else repo_root / "data" / "Rabbit_output"
+        else repo_root / DEFAULT_RABBIT_ROOT
     )
     maps_root = (
         args.maps_root
         if args.maps_root is not None
-        else repo_root / "data" / "model_input" / "maps"
+        else repo_root / DEFAULT_MAPS_ROOT
     )
     runs_root = (
         args.runs_root
         if args.runs_root is not None
-        else repo_root / "results" / "simulation_runs"
+        else repo_root / DEFAULT_RUNS_ROOT
     )
     executable = (
         args.executable
         if args.executable is not None
-        else repo_root / "Program" / "Executables" / "Run_model_debug"
+        else repo_root / DEFAULT_EXECUTABLE
     )
     summary_script = (
         args.summary_script
         if args.summary_script is not None
-        else repo_root / "scripts" / "python" / "get_summary_maps_from_simulations.py"
+        else repo_root / DEFAULT_SUMMARY_SCRIPT
     )
     scenario_label = f"{args.scenario}_IC" if args.inbreeding else args.scenario
 
@@ -573,9 +592,9 @@ def main() -> int:
         return 1
 
     settings_file = (
-        get_settings_file_IC(args.scenario, repo_root)
-        if args.inbreeding
-        else get_settings_file(args.scenario, repo_root)
+        args.settings_file
+        if args.settings_file is not None
+        else get_settings_file(args.scenario, repo_root, args.inbreeding)
     )
     logger.info("settings_file=%s", settings_file)
 
@@ -669,7 +688,7 @@ def main() -> int:
     template = (
         args.template
         if args.template is not None
-        else repo_root / "data" / "GIS_maps" / "Peninsula_500_template.tif"
+        else repo_root / DEFAULT_TEMPLATE
     )
     logger.info("template=%s", template)
     if not template.exists():

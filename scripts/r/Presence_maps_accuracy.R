@@ -5,7 +5,17 @@ library(terra)
 # # sim_data <- Folder path here
 # hab_rast <- rast("data/GIS_maps/Lynx_HabitatMap_LUCAS_2015.asc")
 
-mean_MCC <- function(obs_dir, sim_data, hab_rast) {
+#----------------------------------------
+# Settings (defaults of mean_MCC() and mean_pop_hit())
+#----------------------------------------
+# Only used if the object does not exist yet.
+
+# Aggregation factors (in 500 m cells) for the coarser MCC scores: 10 = 5 km, 20 = 10 km
+if (!exists("mcc_aggregation")) mcc_aggregation <- c(km5 = 10, km10 = 20)
+# Distances (m) within which a population counts as hit
+if (!exists("pop_hit_buffers")) pop_hit_buffers <- c(m500 = 500, km5 = 5000, km10 = 10000)
+
+mean_MCC <- function(obs_dir, sim_data, hab_rast, aggregation = mcc_aggregation) {
   source(file.path("scripts", "r", "Rasterize_output_maps.R"))
   
   obs_files <- list.files(obs_dir,pattern = ".shp", full.names = T)
@@ -64,7 +74,7 @@ mean_MCC <- function(obs_dir, sim_data, hab_rast) {
     mcc <- c(mcc, phi)
     
     # 5km resolution ---------------------------------------------------------------------------------------------------
-    sim_5 <- terra::aggregate(sim_rast, fact = 10, fun = max)
+    sim_5 <- terra::aggregate(sim_rast, fact = aggregation["km5"], fun = max)
     obs_5 <- obs_rast <- rasterize(obs_pr, sim_5, field = 1, background = 0)
     
     pred <- values(sim_5, na.rm = FALSE)
@@ -100,7 +110,7 @@ mean_MCC <- function(obs_dir, sim_data, hab_rast) {
     mcc5 <- c(mcc5, phi)
     
     # 10km resolution ---------------------------------------------------------------------------------------------------
-    sim_10 <- terra::aggregate(sim_rast, fact = 20, fun = max)
+    sim_10 <- terra::aggregate(sim_rast, fact = aggregation["km10"], fun = max)
     obs_10 <- obs_rast <- rasterize(obs_pr, sim_10, field = 1, background = 0)
     
     pred <- values(sim_10, na.rm = FALSE)
@@ -159,7 +169,7 @@ mean_MCC <- function(obs_dir, sim_data, hab_rast) {
 #                          population to the nearest simulated presence,
 #                          averaged across populations
 mean_pop_hit <- function(obs_dir, sim_data, hab_rast,
-                         buffers = c(m500 = 500, km5 = 5000, km10 = 10000)) {
+                         buffers = pop_hit_buffers) {
   source(file.path("scripts", "r", "Rasterize_output_maps.R"))
   
   obs_files <- list.files(obs_dir, pattern = ".shp", full.names = TRUE)

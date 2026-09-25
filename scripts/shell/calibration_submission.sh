@@ -13,8 +13,10 @@
 RABDIR=$1
 SETTINGS=$2
 MODEL_OUT=$3
-MODEL_EXE="Program/Executables/Run_model_debug"
-OBS_DIR="data/GIS_maps/presence_vectors/"
+
+# Settings: used unless already set as environment variables
+MODEL_EXE="${MODEL_EXE:-Program/Executables/Run_model_debug}"
+OBS_DIR="${OBS_DIR:-data/GIS_maps/presence_vectors/}"
 
 TASK_ID=${SLURM_ARRAY_TASK_ID}
 
