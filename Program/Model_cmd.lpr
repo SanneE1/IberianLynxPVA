@@ -32,10 +32,10 @@ begin
 
     if (LineSplit[0] = 'start_year') then start_year := StrToInt(LineSplit[1])
     else if (LineSplit[0] = 'end_year') then end_year := StrToInt(LineSplit[1])
-    else if (LineSplit[0] = 'create_maps') then
+    else if (LineSplit[0] = 'create_additional_output') then
       begin
-            if (StrToInt(LineSplit[1]) = 1) then
-              create_maps := True;
+            if (StrToInt(LineSplit[1]) = 0) then
+              create_additional_output := False;
       end
     else if (LineSplit[0] = 'create_maps_25yrs') then
       begin
@@ -252,7 +252,7 @@ if pedigree then
   CloseFile(to_file_out);
 end;
 
-if create_maps then
+if create_additional_output then
   begin
   {Write Migration list to file}
   AssignFile(mig_file_out, output_dir + PathDelim + 'lynx_migration.csv');

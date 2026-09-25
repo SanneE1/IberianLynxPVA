@@ -77,15 +77,15 @@ begin
                   if random < L_rep_prob then
                   begin
                     {Save locations of mother, incase of a breeding event outside established populations}
-                    if create_maps then
-                    if Lynx^.Current_pop = 0 then
-                    begin
-                     New(RepOutsidePop);
-                     RepOutsidePop^.year := current_year;
-                     RepOutsidePop^.X := Lynx^.Coor_X;
-                     RepOutsidePop^.Y := Lynx^.Coor_Y;
-                     OutRepList.Add(RepOutsidePop);
-                    end;
+                    if create_additional_output then
+                      if Lynx^.Current_pop = 0 then
+                      begin
+                        New(RepOutsidePop);
+                        RepOutsidePop^.year := current_year;
+                        RepOutsidePop^.X := Lynx^.Coor_X;
+                        RepOutsidePop^.Y := Lynx^.Coor_Y;
+                        OutRepList.Add(RepOutsidePop);
+                      end;
 
                     {Do the actual reproduction}
                     current_litter_size := Round(randg(L_litter_size, L_litter_size_sd));
@@ -376,22 +376,21 @@ begin
           if Lynx^.Sex = 'f' then ConnectionMap[TestCoordX, TestCoordY, 0] := ConnectionMap[TestCoordX, TestCoordY, 0] + 1
           else ConnectionMap[TestCoordX, TestCoordY, 1] := ConnectionMap[TestCoordX, TestCoordY, 1] + 1;
 
+          if create_additional_output then
+             if  (Lynx^.Current_pop = 0) and (whichPop(TestCoordX, TestCoordY) <> 0) and
+                 (Lynx^.Previous_pop <> whichPop(TestCoordX, TestCoordY)) then
+             begin
+               new(MigrationEvent);
+               MigrationEvent^.year := current_year;
+               MigrationEvent^.sex := Lynx^.Sex;
+               MigrationEvent^.age := Lynx^.Age;
+               MigrationEvent^.natal_pop := Lynx^.Natal_pop;
+               MigrationEvent^.old_pop := Lynx^.Previous_pop;
+               MigrationEvent^.new_pop := whichPop(TestCoordX, TestCoordY);
 
-          if  (Lynx^.Current_pop = 0) and (whichPop(TestCoordX, TestCoordY) <> 0) and
-          (Lynx^.Previous_pop <> whichPop(TestCoordX, TestCoordY)) then
-          begin
-           new(MigrationEvent);
-
-           MigrationEvent^.year := current_year;
-           MigrationEvent^.sex := Lynx^.Sex;
-           MigrationEvent^.age := Lynx^.Age;
-           MigrationEvent^.natal_pop := Lynx^.Natal_pop;
-           MigrationEvent^.old_pop := Lynx^.Previous_pop;
-           MigrationEvent^.new_pop := whichPop(TestCoordX, TestCoordY);
-
-           MigrationList.Add(MigrationEvent);
-           MigrationEvent := nil;
-          end;
+               MigrationList.Add(MigrationEvent);
+               MigrationEvent := nil;
+             end;
 
           if (Lynx^.Current_pop <> whichPop(TestCoordX, TestCoordY)) then
           begin

@@ -83,7 +83,7 @@ var
   sum_pop_size: array[1..100] of integer;
   each_pop_sizes: array of array of integer;
   output_dir, habitat_folder, breeding_folder, prey_folder: string;
-  create_maps: boolean = True;
+  create_additional_output: boolean = True;
   all_year_maps: boolean = False;
   create_maps_25yrs: boolean = False;
   create_2yr_month_maps: boolean = False;

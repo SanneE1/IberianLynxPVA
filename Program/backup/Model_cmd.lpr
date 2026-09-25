@@ -32,11 +32,6 @@ begin
 
     if (LineSplit[0] = 'start_year') then start_year := StrToInt(LineSplit[1])
     else if (LineSplit[0] = 'end_year') then end_year := StrToInt(LineSplit[1])
-    else if (LineSplit[0] = 'create_maps') then
-      begin
-            if (StrToInt(LineSplit[1]) = 1) then
-              create_maps := True;
-      end
     else if (LineSplit[0] = 'create_maps_25yrs') then
       begin
             if (StrToInt(LineSplit[1]) = 1) then
@@ -128,8 +123,8 @@ if not (prey_folder = '0') then
 
 PopsMap := ReadMap(mapPops);
 
-SetLength(MalesMap, Mapdimx + 1, Mapdimy + 1, 2);
-SetLength(FemalesMap, Mapdimx + 1, Mapdimy + 1, 2);
+SetLength(MalesMap, Mapdimx + 1, Mapdimy + 1, 3);
+SetLength(FemalesMap, Mapdimx + 1, Mapdimy + 1, 3);
 SetLength(ConnectionMap, Mapdimx + 1, Mapdimy + 1, 2);
 
 WriteLn('Creating output folders if they dont exist');
@@ -252,7 +247,7 @@ if pedigree then
   CloseFile(to_file_out);
 end;
 
-if create_maps then
+if create_additional_output then
   begin
   {Write Migration list to file}
   AssignFile(mig_file_out, output_dir + PathDelim + 'lynx_migration.csv');

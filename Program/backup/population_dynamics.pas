@@ -62,8 +62,6 @@ begin
         Survival;
         end;
 
-        WriteLn(' to ' + IntToStr(LynxPopulation.Count));
-
         if (month = 5) and ((current_year = start_year) or all_year_maps or (create_maps_25yrs and (current_year mod 25 = 0))) then
         begin
           WriteLn('Writing maps');

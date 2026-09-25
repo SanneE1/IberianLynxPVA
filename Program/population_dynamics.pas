@@ -49,7 +49,6 @@ begin
             PreySuitabilityMap := ReadMap(prey_folder + PathDelim + 'Lynx_PreyMap_' + IntToStr(current_year) + '.txt');
           end;
 
-        if (current_year >= 2009) and (current_year < 2025) then
         Lynx_reintroduction(current_year);
 
         end;

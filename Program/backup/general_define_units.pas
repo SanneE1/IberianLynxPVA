@@ -83,7 +83,6 @@ var
   sum_pop_size: array[1..100] of integer;
   each_pop_sizes: array of array of integer;
   output_dir, habitat_folder, breeding_folder, prey_folder: string;
-  create_maps: boolean = True;
   all_year_maps: boolean = False;
   create_maps_25yrs: boolean = False;
   create_2yr_month_maps: boolean = False;
@@ -140,6 +139,7 @@ var
   L_surv_disp_rho: real;
   L_alpha_steps: real;
   L_theta_d, L_theta_delta, L_delta_theta_long, L_delta_theta_f, L_L, L_N_d, L_beta, L_gamma: real;
+  male_T_multiplier: real;
 
   {Lynx - Inbreeding}
   pedigree: boolean = false;
